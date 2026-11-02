@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ride Bench</title>
+<meta name="theme-color" content="#0E1419">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Ride Bench: ski and snowboard gear on a showroom bench. Header with sport switch, full-bleed 3D view, control rail at the bottom. */
+:root{--bg:#0E1419;--panel:#17212A;--panel2:#1E2A35;--fg:#E6EDF2;--muted:#8D9CA8;--line:#2A3743;--accent:#5CC8FF;--accent-ink:#0B1218;--good:#4CC28A;
+  --f-display:"Saira Condensed","Arial Narrow",sans-serif;--f-body:"IBM Plex Sans",system-ui,sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.04em;text-transform:uppercase}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+input[type=text],input[type=search]{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 11px;width:100%}
+.app{height:100%;display:flex;flex-direction:column}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px 16px;flex-wrap:wrap;padding-block:10px 8px;border-bottom:1px solid var(--line)}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(22px,2.3vw,30px);letter-spacing:.03em;text-transform:uppercase;margin:0;line-height:1}
+.stage{margin-top:4px;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.stage b{color:var(--accent);font-weight:500}
+.hdr-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:8px 14px}
+.seg button+button{border-left:1px solid var(--line)}
+.view{position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(70% 60% at 50% 40%,#22313d,transparent 72%),linear-gradient(180deg,#121a21,#0a0f13)}
+.view.cmp{background:radial-gradient(70% 34% at 50% 22%,#22313d,transparent 72%),radial-gradient(70% 34% at 50% 74%,#22313d,transparent 72%),linear-gradient(180deg,#121a21,#0a0f13)}
+canvas{position:absolute;inset:0;display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+.cmpdiv{position:absolute;left:0;right:0;top:50%;border-top:1px dashed var(--line);pointer-events:none}
+.lbls{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;transform:translate(-50%,-50%);width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-family:var(--f-mono);font-size:12px;display:grid;place-items:center;box-shadow:0 0 0 3px rgba(14,20,25,.75);transition:opacity .25s}
+.legend{position:absolute;left:max(12px,env(safe-area-inset-left,0px));width:min(290px,42%);background:rgba(14,20,25,.86);border:1px solid var(--line);border-radius:10px;padding:8px 10px;transition:opacity .25s;pointer-events:none;overflow:hidden}
+.legend ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.legend li{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;font-size:12.5px;line-height:1.3}
+.legend li i{font-style:normal;width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-family:var(--f-mono);font-size:11px;display:grid;place-items:center}
+.legend b{display:block;font-family:var(--f-display);font-size:14px;letter-spacing:.03em;text-transform:uppercase}
+.legend span{color:var(--muted)}
+@media (max-width:700px){.legend span{display:none}.legend{width:auto;max-width:60%}}
+.sidebar{position:absolute;left:max(12px,env(safe-area-inset-left,0px));right:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
+.sidebar>*{pointer-events:auto}
+.sidebar.b{top:10px}.sidebar.a{bottom:10px}
+.tagk{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);padding:4px 7px;border-radius:4px}
+.total{display:flex;align-items:center;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}
+.total .k{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;background:var(--fg);color:var(--bg);padding:8px 10px 8px 14px;clip-path:polygon(12px 0,100% 0,100% 100%,12px 100%,0 50%)}
+.total .v{font-family:var(--f-display);font-weight:700;font-size:clamp(20px,2vw,28px);line-height:1;background:var(--accent);color:var(--accent-ink);padding:6px 12px;border-radius:0 6px 6px 0}
+.zoom{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:10px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:38px;height:38px;padding:0;font-size:18px;display:grid;place-items:center}
+.view.cmp .zoom{bottom:auto;top:calc(50% + 10px)}
+.hint{position:absolute;right:62px;bottom:12px;font-size:12px;color:var(--muted);text-align:right;pointer-events:none}
+.view.cmp .hint{display:none}
+.rail{border-top:1px solid var(--line);padding-block:8px calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.slots{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0}
+.slot{display:flex;flex-direction:column;align-items:flex-start;text-transform:none;letter-spacing:0;padding:6px 12px;min-width:150px;max-width:260px;text-align:left;font-family:var(--f-body);font-weight:400}
+.slot .sk{font-family:var(--f-mono);font-size:10.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.08em}
+.slot .sn{font-family:var(--f-display);font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.slot .sp{font-size:12px;color:var(--muted)}
+.sidebar .slot{min-width:0;padding:4px 10px;background:var(--panel)}
+.sidebar .slot .sn{font-size:14px}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:70px;text-align:right}
+.tools{justify-content:center}
+.tools .tool{font-size:clamp(14px,1.2vw,17px);padding:9px 16px}
+.sheet{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.sheet[hidden],.pop[hidden],[hidden]{display:none!important}
+.sheet-hd{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-block:14px 10px;border-bottom:1px solid var(--line)}
+.sheet h2{font-family:var(--f-display);font-size:24px;text-transform:uppercase;margin:0;letter-spacing:.03em}
+.sheet .sub{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.sheet .body{flex:1;overflow:auto;padding-block:12px 40px}
+.plist{display:flex;flex-direction:column;gap:8px;max-width:760px;margin:0 auto}
+.pitem{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;text-transform:none;letter-spacing:0;padding:12px 14px;font-family:var(--f-body);font-weight:400}
+.pitem[aria-current="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.pitem .br{font-family:var(--f-mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.07em}
+.pitem .nm{font-family:var(--f-display);font-weight:600;font-size:19px;display:block}
+.pitem .ds{font-size:13px;color:var(--muted);display:block}
+.pitem .pr{font-family:var(--f-display);font-weight:700;font-size:20px;color:var(--accent);white-space:nowrap}
+.pop{position:absolute;right:12px;top:12px;width:min(340px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;z-index:6;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.poph{font-family:var(--f-display);font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 6px}
+.poph small{font-family:var(--f-body);font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);margin-left:6px;font-size:13px}
+.sws{display:flex;gap:8px;flex-wrap:wrap}
+.sws button{width:34px;height:34px;padding:0;border-radius:50%;border:2px solid var(--line)}
+.sws button[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px;background:inherit}
+.popf{display:flex;justify-content:flex-end;margin-top:12px}
+.specwrap{max-width:1000px;margin:0 auto}
+.spec{width:100%;border-collapse:collapse;font-size:15px;margin-bottom:22px}
+.spec th,.spec td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+.spec thead th{font-family:var(--f-display);font-size:22px;text-transform:uppercase;letter-spacing:.02em;line-height:1.1;border-bottom:2px solid var(--accent)}
+.spec thead th small{display:block;font-family:var(--f-mono);font-size:11px;color:var(--accent);letter-spacing:.08em;margin-bottom:3px}
+.spec thead th.sl{font-family:var(--f-mono);font-size:12px;color:var(--muted);width:150px;vertical-align:bottom}
+.spec tbody th{font-family:var(--f-mono);font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);width:150px}
+.spec td.diff{color:var(--accent)}
+.spec td.price{font-family:var(--f-display);font-weight:700;font-size:22px;color:var(--accent)}
+.spec.tot td{font-family:var(--f-display);font-weight:700;font-size:28px;color:var(--accent)}
+.specnote{font-size:12.5px;color:var(--muted);line-height:1.5}
+.shopform{display:flex;flex-direction:column;gap:8px;max-width:560px;margin:0 auto}
+.shopform label,.shopform .lab{font-family:var(--f-display);font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:12px}
+.shopform .lab span,.shopform label span{display:block;font-family:var(--f-body);font-size:12.5px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);margin-top:2px}
+.prl{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:8px;padding:8px;flex:none}
+.prl .pg{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-top:10px}
+.prl .pr{display:flex;align-items:center;gap:10px;justify-content:space-between;font-size:14px}
+.prl .pr input{width:110px;flex:none}
+@media (max-width:700px){.slot{min-width:0;flex:1 1 140px}.hint{display:none}.spec thead th.sl,.spec tbody th{width:90px}.spec th,.spec td{padding:8px 6px}}
+@media print{body{overflow:visible;background:#fff;color:#000}.app,#pick,#shop{display:none!important}#spec{position:static;background:#fff;color:#000}#spec .hdr-r{display:none}#spec .body{overflow:visible}.spec td.diff,.spec td.price,.spec.tot td{color:#000}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="pad">
+    <div><h1 id="title">Ride Bench</h1><div class="stage" id="stage"></div></div>
+    <div class="hdr-r">
+      <div class="seg" id="sportSeg"><button data-sport="snowboard">Snowboard</button><button data-sport="ski">Ski</button></div>
+      <div class="seg" id="modeSeg"><button data-mode="gear">Gear</button><button data-mode="rider">Rider</button></div>
+      <button id="shopBtn" style="font-size:12px;padding:6px 9px;opacity:.7">Shop</button>
+    </div>
+  </header>
+  <div class="view" id="view">
+    <canvas id="c" aria-label="3D view. Drag to rotate, pinch or scroll to zoom, use Take apart to see every layer."></canvas>
+    <div class="cmpdiv" id="cmpdiv" hidden></div>
+    <div class="lbls" id="lbls"></div>
+    <div class="legend" id="legend" style="opacity:0"><ol id="legendL"></ol></div>
+    <div class="sidebar b" id="barB" hidden><span class="tagk">Compare</span><div class="slots" id="slotsB" style="flex:0 1 auto"></div><div class="total"><span class="k">Total</span><span class="v" id="totB"></span></div><button id="cmpClose">Close</button></div>
+    <div class="sidebar a"><div class="total" id="totAWrap"><span class="k" id="totAK">Setup</span><span class="v" id="totA"></span></div></div>
+    <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button></div>
+    <div class="hint" id="hint">Drag to rotate · scroll or pinch to zoom</div>
+    <div class="pop" id="colPop" hidden><div id="colBody"></div><div class="popf"><button class="primary" id="colDone">Done</button></div></div>
+  </div>
+  <div class="rail pad">
+    <div class="row"><div class="slots" id="slotsA"></div></div>
+    <div class="row"><button id="apart" class="primary">Take apart</button><input id="t" type="range" min="0" max="1000" value="0" aria-label="Take apart"><span class="count" id="count"></span></div>
+    <div class="row tools"><button id="colBtn" class="tool" aria-pressed="false">Colors</button><button id="cmpBtn" class="tool" aria-pressed="false">Compare</button><button id="specBtn" class="tool">Specs</button></div>
+  </div>
+</div>
+
+<div class="sheet" id="pick" hidden>
+  <div class="sheet-hd pad"><div><h2 id="pickTitle">Choose</h2><div class="sub" id="pickSub"></div></div><button class="primary" id="pickClose">Close</button></div>
+  <div class="body pad"><div class="plist" id="plist"></div></div>
+</div>
+<div class="sheet" id="spec" hidden>
+  <div class="sheet-hd pad"><div><h2 id="specTitle">Spec sheet</h2><div class="sub" id="specSub"></div></div><div class="hdr-r"><button id="specPrint">Print</button><button class="primary" id="specClose">Close</button></div></div>
+  <div class="body pad"><div class="specwrap" id="specBody"></div></div>
+</div>
+<div class="sheet" id="shop" hidden>
+  <div class="sheet-hd pad"><div><h2>Shop setup</h2><div class="sub">Saved on this device</div></div><button class="primary" id="shopClose">Done</button></div>
+  <div class="body pad"><div class="shopform">
+    <label for="sName">Shop name<span>Replaces the title at the top of the screen</span></label><input id="sName" type="text" maxlength="40" placeholder="Mountain Ride Shop">
+    <div class="lab">Prices<span>Sample prices are filled in. Type your own price for anything you sell. Leave a box blank to go back to the sample price.</span></div>
+    <input id="sPrQ" type="search" placeholder="Find an item…" autocomplete="off"><div class="prl" id="sPrices"></div>
+  </div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
+
+/* ===================== CATALOG =====================
+   Brands are the ones rented, demoed or sold around the western Maine mountains.
+   Specs are descriptive (profile, flex, terrain) and vary by size and model year.
+   Prices are samples; the shop sets its own in Shop setup. */
+const C=(n,h)=>[n,h];
+const GEAR={
+snowboard:{
+ board:[
+  {id:'sb-custom',brand:'Burton',name:'Custom',sub:'All-mountain · camber',price:629,p:{L:156,waist:25.2,tip:29.6,prof:'camber',twin:0},
+   colors:[C('Black',0x1d2024),C('Ice blue',0x6fb7d9),C('Red',0xb8332a),C('Cream',0xe6dcc6)],
+   specs:[['Terrain','All-mountain'],['Profile','Camber'],['Shape','Directional twin'],['Flex','Medium'],['Ability','Intermediate to expert'],['Sizes','Many lengths, plus wide']]},
+  {id:'sb-instigator',brand:'Burton',name:'Instigator',sub:'Beginner · flat top',price:399,p:{L:150,waist:25.6,tip:30,prof:'flat',twin:0},
+   colors:[C('Teal',0x2f8f8a),C('Black',0x1d2024),C('Orange',0xd9772b)],
+   specs:[['Terrain','All-mountain, learning'],['Profile','Flat with early rise at tip and tail'],['Shape','Directional'],['Flex','Soft'],['Ability','Beginner'],['Sizes','Many lengths, plus wide']]},
+  {id:'sb-doa',brand:'Capita',name:'Defenders of Awesome',sub:'Park + all-mountain · hybrid camber',price:579,p:{L:154,waist:25.1,tip:29.2,prof:'hybrid',twin:1},
+   colors:[C('Purple',0x5b4a9a),C('Black',0x1d2024),C('Lime',0x9bc53d)],
+   specs:[['Terrain','Park and all-mountain'],['Profile','Hybrid camber'],['Shape','True twin'],['Flex','Medium'],['Ability','Intermediate to expert'],['Sizes','Many lengths, plus wide']]},
+  {id:'sb-assassin',brand:'Salomon',name:'Assassin',sub:'All-mountain freestyle · hybrid camber',price:549,p:{L:155,waist:25.2,tip:29.4,prof:'hybrid',twin:1},
+   colors:[C('Navy',0x23365a),C('Sand',0xc9b48a),C('Black',0x1d2024)],
+   specs:[['Terrain','All-mountain freestyle'],['Profile','Hybrid camber'],['Shape','Twin'],['Flex','Medium'],['Ability','Intermediate to advanced'],['Sizes','Many lengths, plus wide']]},
+  {id:'sb-frontier',brand:'Jones',name:'Frontier',sub:'All-mountain freeride · directional',price:599,p:{L:158,waist:25.6,tip:30.4,prof:'hybrid',twin:0},
+   colors:[C('Forest',0x2f5a3c),C('Black',0x1d2024),C('Rust',0x9c4a26)],
+   specs:[['Terrain','All-mountain, freeride, powder days'],['Profile','Camber underfoot, rocker in the nose'],['Shape','Directional'],['Flex','Medium-stiff'],['Ability','Intermediate to expert'],['Sizes','Many lengths, plus wide']]}],
+ bind:[
+  {id:'sbb-mission',brand:'Burton',name:'Mission',sub:'All-mountain · two-strap',price:239,p:{hb:15,rear:0},colors:[C('Black',0x1f2226),C('White',0xe8ecef),C('Blue',0x2f6fb0)],
+   specs:[['Entry','Two straps'],['Flex','Medium'],['Terrain','All-mountain'],['Ability','Beginner to advanced'],['Fits','Most boots, size by boot']]},
+  {id:'sbb-force',brand:'Union',name:'Force',sub:'All-mountain · two-strap',price:279,p:{hb:16,rear:0},colors:[C('Black',0x1f2226),C('Gray',0x6d757c),C('Red',0xb8332a)],
+   specs:[['Entry','Two straps'],['Flex','Medium-stiff'],['Terrain','All-mountain'],['Ability','Intermediate to expert'],['Fits','Most boots, size by boot']]},
+  {id:'sbb-strata',brand:'Union',name:'Strata',sub:'Freestyle · two-strap',price:299,p:{hb:14,rear:0},colors:[C('Black',0x1f2226),C('Olive',0x5f6640),C('White',0xe8ecef)],
+   specs:[['Entry','Two straps'],['Flex','Medium, forgiving'],['Terrain','Park and all-mountain'],['Ability','Intermediate to advanced'],['Fits','Most boots, size by boot']]},
+  {id:'sbb-cartel',brand:'Burton',name:'Cartel',sub:'All-mountain · responsive',price:319,p:{hb:17,rear:0},colors:[C('Black',0x1f2226),C('Gold',0xc59a3c),C('Gray',0x6d757c)],
+   specs:[['Entry','Two straps'],['Flex','Medium-stiff'],['Terrain','All-mountain, carving'],['Ability','Advanced to expert'],['Fits','Most boots, size by boot']]}],
+ boot:[
+  {id:'sbt-moto',brand:'Burton',name:'Moto BOA',sub:'Soft · single dial',price:269,p:{lace:'boa1',h:17},colors:[C('Black',0x202326),C('Gray',0x6d757c),C('Tan',0xa08560)],
+   specs:[['Closure','Single BOA dial'],['Flex','Soft'],['Liner','Heat-moldable foam'],['Ability','Beginner to intermediate']]},
+  {id:'sbt-histandard',brand:'Vans',name:'Hi-Standard OG',sub:'Classic laces · medium-soft',price:279,p:{lace:'lace',h:18},colors:[C('Black',0x202326),C('White',0xdfe3e6),C('Brown',0x6b4a32)],
+   specs:[['Closure','Traditional laces'],['Flex','Medium-soft'],['Liner','Heat-moldable foam'],['Ability','All levels, freestyle feel']]},
+  {id:'sbt-lashed',brand:'ThirtyTwo',name:'Lashed Double BOA',sub:'Medium · two dials',price:349,p:{lace:'boa2',h:19},colors:[C('Black',0x202326),C('Navy',0x23365a),C('Gray',0x6d757c)],
+   specs:[['Closure','Two BOA dials (upper and lower zones)'],['Flex','Medium'],['Liner','Heat-moldable foam'],['Ability','Intermediate to advanced']]},
+  {id:'sbt-ion',brand:'Burton',name:'Ion BOA',sub:'Stiff · two dials',price:529,p:{lace:'boa2',h:21},colors:[C('Black',0x202326),C('Gray',0x6d757c)],
+   specs:[['Closure','Two BOA dials'],['Flex','Stiff'],['Liner','Heat-moldable, high support'],['Ability','Advanced to expert']]}]
+},
+ski:{
+ ski:[
+  {id:'sk-kore',brand:'HEAD',name:'Kore 93',sub:'All-mountain · light',price:699,p:{L:172,tip:13.3,waist:9.3,tail:11.8,twin:0},colors:[C('Gray',0x7b848b),C('Black',0x1d2024),C('Blue',0x2f6fb0)],
+   specs:[['Terrain','All-mountain'],['Waist','93 mm'],['Profile','Camber with tip and tail rocker'],['Feel','Light, quick'],['Ability','Intermediate to expert']]},
+  {id:'sk-m7',brand:'Völkl',name:'Mantra M7',sub:'All-mountain charger',price:849,p:{L:177,tip:13.6,waist:9.6,tail:12.2,twin:0},colors:[C('Orange',0xd9772b),C('Black',0x1d2024),C('White',0xe8ecef)],
+   specs:[['Terrain','All-mountain, hardpack to soft snow'],['Waist','96 mm'],['Profile','Camber with tip and tail rocker'],['Feel','Damp, powerful'],['Ability','Advanced to expert']]},
+  {id:'sk-rustler9',brand:'Blizzard',name:'Rustler 9',sub:'All-mountain freeride',price:799,p:{L:180,tip:13.4,waist:9.4,tail:12,twin:0},colors:[C('Black',0x1d2024),C('Green',0x3d7a52),C('Red',0xb8332a)],
+   specs:[['Terrain','All-mountain, freeride'],['Waist','94 mm'],['Profile','Rocker, camber, rocker'],['Feel','Playful but stable'],['Ability','Intermediate to expert']]},
+  {id:'sk-enforcer94',brand:'Nordica',name:'Enforcer 94',sub:'All-mountain',price:799,p:{L:179,tip:13.3,waist:9.4,tail:12.1,twin:0},colors:[C('Black',0x1d2024),C('Yellow',0xd7b23a)],
+   specs:[['Terrain','All-mountain'],['Waist','94 mm'],['Profile','Camber with tip and tail rocker'],['Feel','Stable, smooth'],['Ability','Intermediate to expert']]},
+  {id:'sk-bent90',brand:'Atomic',name:'Bent 90',sub:'Freestyle all-mountain · twin tip',price:599,p:{L:172,tip:12.5,waist:9.0,tail:12.2,twin:1},colors:[C('Red',0xb8332a),C('Black',0x1d2024),C('Mint',0x7fc7b0)],
+   specs:[['Terrain','All-mountain freestyle, park'],['Waist','90 mm'],['Profile','Rocker, camber, rocker'],['Feel','Playful, can ride switch'],['Ability','Intermediate to advanced']]},
+  {id:'sk-exp82',brand:'Rossignol',name:'Experience 82',sub:'On-piste carver',price:749,p:{L:168,tip:12.6,waist:8.2,tail:11.4,twin:0},colors:[C('Red',0xb8332a),C('Black',0x1d2024),C('White',0xe8ecef)],
+   specs:[['Terrain','Groomed runs, carving'],['Waist','82 mm'],['Profile','Camber with tip rocker'],['Feel','Grippy, quick edge to edge'],['Ability','Intermediate to advanced']]}],
+ bind:[
+  {id:'skb-griffon13',brand:'Marker',name:'Griffon 13',sub:'All-mountain · DIN up to 13',price:299,p:{sz:1},colors:[C('Black',0x1f2226),C('White',0xe8ecef),C('Red',0xb8332a)],
+   specs:[['Release (DIN)','Up to 13'],['Use','All-mountain, freeride'],['Skier','Intermediate to expert'],['Brake','Sized to ski width']]},
+  {id:'skb-strive12',brand:'Salomon',name:'Strive 12',sub:'All-mountain · DIN up to 12',price:249,p:{sz:.95},colors:[C('Black',0x1f2226),C('White',0xe8ecef),C('Blue',0x2f6fb0)],
+   specs:[['Release (DIN)','Up to 12'],['Use','All-mountain'],['Skier','Intermediate to advanced'],['Brake','Sized to ski width']]},
+  {id:'skb-pivot15',brand:'Look',name:'Pivot 15',sub:'Freeride · DIN up to 15',price:399,p:{sz:1.08},colors:[C('Black',0x1f2226),C('Forged',0x8b9096),C('Orange',0xd9772b)],
+   specs:[['Release (DIN)','Up to 15'],['Use','Freeride, park, hard charging'],['Skier','Advanced to expert'],['Brake','Sized to ski width']]},
+  {id:'skb-attack11',brand:'Tyrolia',name:'Attack 11',sub:'All-mountain · DIN up to 11',price:229,p:{sz:.92},colors:[C('Black',0x1f2226),C('White',0xe8ecef)],
+   specs:[['Release (DIN)','Up to 11'],['Use','All-mountain'],['Skier','Beginner to intermediate'],['Brake','Sized to ski width']]}],
+ boot:[
+  {id:'skt-edge80',brand:'HEAD',name:'Edge LYT 80',sub:'Comfort · flex 80',price:349,p:{flex:80},colors:[C('Black',0x202326),C('Gray',0x6d757c)],
+   specs:[['Flex','80 (softer)'],['Fit','Roomy, comfort fit'],['Buckles','4 + power strap'],['Ability','Beginner to intermediate']]},
+  {id:'skt-hawx100',brand:'Atomic',name:'Hawx Prime 100',sub:'All-mountain · flex 100',price:499,p:{flex:100},colors:[C('Black',0x202326),C('Red',0xb8332a),C('Gray',0x6d757c)],
+   specs:[['Flex','100 (medium)'],['Fit','Medium volume'],['Buckles','4 + power strap'],['Ability','Intermediate to advanced']]},
+  {id:'skt-speed110',brand:'Nordica',name:'Speedmachine 3 110',sub:'All-mountain · flex 110',price:599,p:{flex:110},colors:[C('Black',0x202326),C('Green',0x3d7a52)],
+   specs:[['Flex','110 (medium-stiff)'],['Fit','Medium volume'],['Buckles','4 + power strap'],['Ability','Advanced']]},
+  {id:'skt-mach120',brand:'Tecnica',name:'Mach1 MV 120',sub:'Performance · flex 120',price:749,p:{flex:120},colors:[C('Black',0x202326),C('Blue',0x2f6fb0),C('White',0xe8ecef)],
+   specs:[['Flex','120 (stiff)'],['Fit','Medium volume'],['Buckles','4 + power strap'],['Ability','Advanced to expert']]}]
+}};
+const CLOTH={
+ top:[
+  {id:'top-tnf-shell',brand:'The North Face',name:'3-layer shell jacket',sub:'Waterproof shell · no insulation',price:399,p:{kind:'shell',puff:1,hood:1},colors:[C('Black',0x1d2024),C('Red',0xb8332a),C('Blue',0x2f6fb0),C('Green',0x3d7a52)],
+   specs:[['Type','Shell (layer underneath)'],['Waterproof','Yes, taped seams'],['Insulation','None'],['Features','Helmet-compatible hood, pit zips, powder skirt']]},
+  {id:'top-hh-ins',brand:'Helly Hansen',name:'Insulated ski jacket',sub:'Warm · waterproof',price:349,p:{kind:'ins',puff:1.1,hood:1},colors:[C('Navy',0x23365a),C('Red',0xb8332a),C('White',0xe8ecef)],
+   specs:[['Type','Insulated'],['Waterproof','Yes, taped seams'],['Insulation','Synthetic fill'],['Features','Hood, pass pocket, powder skirt']]},
+  {id:'top-burton-anorak',brand:'Burton',name:'Pullover anorak',sub:'Half-zip · relaxed fit',price:229,p:{kind:'anorak',puff:1.08,hood:1},colors:[C('Olive',0x5f6640),C('Black',0x1d2024),C('Lavender',0x8e85b8)],
+   specs:[['Type','Pullover shell, light fill'],['Waterproof','Water-resistant to waterproof (by model)'],['Insulation','Light'],['Features','Half zip, kangaroo pocket, hood']]},
+  {id:'top-686-puffer',brand:'686',name:'Down puffer jacket',sub:'Packable warmth layer',price:249,p:{kind:'puffer',puff:1.18,hood:0},colors:[C('Black',0x1d2024),C('Tan',0xa08560),C('Blue',0x2f6fb0)],
+   specs:[['Type','Puffer (great mid-layer or cold days)'],['Waterproof','Water-resistant only'],['Insulation','Down'],['Features','Packs into a pocket']]}],
+ bottom:[
+  {id:'bot-tnf-freedom',brand:'The North Face',name:'Freedom insulated pant',sub:'Warm · waterproof',price:199,p:{kind:'pant',w:1.15},colors:[C('Black',0x1d2024),C('Navy',0x23365a),C('Tan',0xa08560)],
+   specs:[['Type','Insulated pant'],['Waterproof','Yes'],['Fit','Regular'],['Features','Boot gaiters, vents']]},
+  {id:'bot-686-cargo',brand:'686',name:'Smarty cargo pant',sub:'Relaxed fit · cargo pockets',price:179,p:{kind:'cargo',w:1.25},colors:[C('Black',0x1d2024),C('Olive',0x5f6640),C('Gray',0x6d757c)],
+   specs:[['Type','Shell with removable liner'],['Waterproof','Yes'],['Fit','Relaxed'],['Features','Cargo pockets, vents']]},
+  {id:'bot-burton-bib',brand:'Burton',name:'Bib overall',sub:'Keeps snow out · shell',price:299,p:{kind:'bib',w:1.18},colors:[C('Black',0x1d2024),C('Rust',0x9c4a26),C('Blue',0x2f6fb0)],
+   specs:[['Type','Bib shell'],['Waterproof','Yes, taped seams'],['Fit','Relaxed'],['Features','Chest pocket, adjustable straps']]},
+  {id:'bot-volcom-pant',brand:'Volcom',name:'Stretch shell pant',sub:'Slim-regular fit',price:189,p:{kind:'pant',w:1.06},colors:[C('Black',0x1d2024),C('Sand',0xc9b48a),C('Green',0x3d7a52)],
+   specs:[['Type','Shell pant'],['Waterproof','Yes'],['Fit','Slim to regular'],['Features','Stretch fabric, boot gaiters']]}]
+};
+const SLOTS={snowboard:[['board','Board'],['bind','Bindings'],['boot','Boots']],ski:[['ski','Skis'],['bind','Bindings'],['boot','Boots']]};
+const CSLOTS=[['top','Top'],['bottom','Bottom']];
+const catOf=(sport,slot)=>slot==='top'||slot==='bottom'?CLOTH[slot]:GEAR[sport][slot];
+const ALL=[...Object.values(GEAR).flatMap(g=>Object.values(g).flat()),...Object.values(CLOTH).flat()];
+
+/* ===================== SHOP + STATE ===================== */
+let shop={name:'',prices:{}};try{Object.assign(shop,JSON.parse(localStorage.getItem('rb-shop')||'{}'))}catch(e){}
+function saveShop(){try{localStorage.setItem('rb-shop',JSON.stringify(shop))}catch(e){}applyShop()}
+const priceOf=it=>{const v=(shop.prices||{})[it.id];const n=v!==undefined&&v!==''?parseFloat(String(v).replace(/[^\d.]/g,'')):NaN;return isNaN(n)?it.price:n};
+function newSide(){const s={sel:{},col:{}};for(const sp in SLOTS){s.sel[sp]={};for(const [k] of [...SLOTS[sp],...CSLOTS])s.sel[sp][k]=0}return s}
+let sport='snowboard',mode='gear',compare=false;
+const A=newSide(),B=newSide();
+try{const st=JSON.parse(localStorage.getItem('rb-state')||'null');if(st){sport=st.sport in SLOTS?st.sport:sport;mode=st.mode==='rider'?'rider':'gear';Object.assign(A.sel,st.sel||{});Object.assign(A.col,st.col||{})}}catch(e){}
+function saveState(){try{localStorage.setItem('rb-state',JSON.stringify({sport,mode,sel:A.sel,col:A.col}))}catch(e){}}
+const itemOf=(side,slot)=>{const L=catOf(sport,slot);return L[Math.min(side.sel[sport][slot]||0,L.length-1)]};
+const colOf=(side,it)=>{const i=side.col[it.id]||0;return it.colors[Math.min(i,it.colors.length-1)][1]};
+const curSlots=()=>mode==='gear'?SLOTS[sport]:CSLOTS;
+
+/* ===================== THREE HELPERS ===================== */
+const renderer=new THREE.WebGLRenderer({canvas:$('c'),antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+const M=(c,r=.55,m=0,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:r,metalness:m},o||{}));
+function put(par,g,m,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);par.add(o);return o}
+function rr(w,h,r){const s=new THREE.Shape();r=Math.max(.01,Math.min(r,w/2,h/2));const x=-w/2,y=-h/2;
+  s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+h-r);s.quadraticCurveTo(x+w,y+h,x+w-r,y+h);s.lineTo(x+r,y+h);s.quadraticCurveTo(x,y+h,x,y+h-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s}
+function rbox(w,h,d,r){r=Math.min(r,w/2-.05,h/2-.05,d/2-.05);const g=new THREE.ExtrudeGeometry(rr(w-2*r,h-2*r,r),{depth:Math.max(.02,d-2*r),bevelEnabled:true,bevelThickness:r,bevelSize:r,bevelSegments:3,curveSegments:5});g.translate(0,0,-(d-2*r)/2);return g}
+const cyl=(rt,rb,h,s=24,open=false,t0=0,tl=Math.PI*2)=>new THREE.CylinderGeometry(rt,rb,h,s,1,open,t0,tl);
+/* a flat plank (board or ski): outline from a half-width function, bent by a camber/rocker function */
+function plank(L,hw,T,bend,y0,N=96){const s=new THREE.Shape(),pts=[];for(let i=0;i<=N;i++){const x=-L/2+L*i/N;pts.push([x,Math.max(.05,hw(x))])}
+  s.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<=N;i++)s.lineTo(pts[i][0],pts[i][1]);for(let i=N;i>=0;i--)s.lineTo(pts[i][0],-pts[i][1]);
+  const g=new THREE.ExtrudeGeometry(s,{depth:T,bevelEnabled:false,steps:1,curveSegments:2});g.rotateX(-Math.PI/2);
+  const p=g.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,p.getY(i)+y0+bend(p.getX(i),p.getZ(i)));g.computeVertexNormals();return g}
+function roundEnds(L,R,f){return x=>{const a=Math.abs(x),e=L/2-R;if(a<=e)return f(x);const u=Math.min(1,(a-e)/R);return f(Math.sign(x)*e)*Math.sqrt(Math.max(0,1-u*u))}}
+const STEEL=M(0x9aa3aa,.35,.9),DARK=M(0x15181b,.6),WOOD=M(0x9c7a48,.8),BASE=M(0x1a1d21,.35,.1);
+
+/* each built part: {o, base, off, name, desc, lab} — off is how far it moves when taken apart */
+function part(list,o,off,name,desc,lab=true){list.push({o,base:o.position.clone(),off:new THREE.Vector3(...off),name,desc,lab});return o}
+
+/* ---------- snowboard ---------- */
+function buildSnowboard(side,P){const b=itemOf(side,'board'),bi=itemOf(side,'bind'),bt=itemOf(side,'boot'),g=new THREE.Group(),p=b.p;
+  const L=p.L,R=15,e=L/2-R,hw=roundEnds(L,R,x=>(p.waist/2)+(p.tip/2-p.waist/2)*Math.pow(x/e,2));
+  const bend=(x,z)=>{const a=Math.abs(x),k=Math.max(0,a-e);let y=k*k*.03;const u=x/e;
+    if(p.prof==='camber')y+=.9*(1-u*u);else if(p.prof==='hybrid')y+=Math.abs(u)<.5?.5*(1-4*u*u):.12*(Math.abs(u)-.5)*4;else if(p.prof==='flat')y+=0;
+    return Math.max(0,y)};
+  const top=M(colOf(side,b),.45,.05);
+  part(P,put(g,plank(L,x=>hw(x)+.25,.12,bend,0),STEEL),[0,-8,0],'Steel edges','Wrap the base so the board can grip ice');
+  part(P,put(g,plank(L,hw,.3,bend,.12),BASE),[0,-3,0],'Base','Sintered P-tex, holds wax for speed');
+  part(P,put(g,plank(L,x=>hw(x)-.4,.7,bend,.42),WOOD),[0,5,0],'Wood core','Sets the flex and pop: '+b.specs.find(s=>s[0]==='Flex')[1].toLowerCase());
+  part(P,put(g,plank(L,hw,.22,bend,1.12),top),[0,12,0],'Topsheet','Protects the core and carries the graphic');
+  const topY=x=>1.34+bend(x,0);
+  [[23,15],[-23,-6]].forEach(([x,ang],i)=>{const bg=bindingSB(bi,colOf(side,bi),P,i===0);bg.position.set(x,topY(x),0);bg.rotation.y=ang*Math.PI/180;g.add(bg);
+    part(P,bg,[0,17,0],'Binding: '+bi.brand+' '+bi.name,bi.sub,i===0);
+    const bo=bootSB(bt,colOf(side,bt),P,i===0);bo.position.set(0,1.7,1);bg.add(bo);part(P,bo,[0,24,0],'Boot: '+bt.brand+' '+bt.name,bt.sub,i===0)});
+  return g}
+function bindingSB(it,col,P,lab){const g=new THREE.Group(),m=M(col,.5,.05),d=DARK,hb=it.p.hb;
+  put(g,rbox(12,1.6,27,.6),d,0,.8,0);
+  const disc=put(g,cyl(6.2,6.2,.5,32),STEEL,0,1.75,0);part(P,disc,[0,2.5,0],'Disc + hardware','Screws into the board inserts; sets stance angle',lab);
+  const heel=put(g,cyl(6.1,6.1,6,24,true,Math.PI/2,Math.PI),m,0,4.4,-8.5);heel.material.side=THREE.DoubleSide;
+  const high=put(g,cyl(6.4,6.2,hb,24,true,Math.PI/2,Math.PI),M(col,.5,.05,{side:THREE.DoubleSide}),0,5+hb/2,-10.2);high.rotation.x=.22;
+  part(P,high,[0,4,-8],'Highback','Supports the back of your leg for heelside turns',lab);
+  const ank=put(g,new THREE.TorusGeometry(6.3,1.2,10,24,Math.PI),M(0x2a2e33,.7),0,10.5,-2.5);ank.scale.z=2.3;part(P,ank,[0,6,5],'Ankle strap','Holds your heel down in the heelcup',lab);
+  const toe=put(g,new THREE.TorusGeometry(5.6,.9,10,24,Math.PI),M(0x2a2e33,.7),0,3.2,10.3);toe.scale.z=1.7;toe.rotation.x=-.35;part(P,toe,[0,5,7],'Toe strap','Pulls the boot back into the heelcup',lab);
+  return g}
+function bootSB(it,col,P,lab){const g=new THREE.Group(),m=M(col,.7),h=it.p.h,sole=M(0x2b2f33,.8);
+  const shell=new THREE.Group();g.add(shell);
+  put(shell,rbox(11.6,2.2,30,.9),sole,0,1.1,1);put(shell,rbox(11,8,25,3.4),m,0,6,2);
+  const sh=put(shell,rbox(11.6,h,13,3.4),m,0,7+h/2,-6);sh.rotation.x=.1;
+  const tongue=put(shell,rbox(7.5,h*.85,3,1.2),M(col,.8,0,{color:new THREE.Color(col).multiplyScalar(.75)}),0,7+h/2,1.6);tongue.rotation.x=.1;
+  part(P,shell,[0,0,0],'Boot shell','Outer boot: '+it.specs.find(s=>s[0]==='Flex')[1].toLowerCase()+' flex',false);
+  const lin=put(g,cyl(4.8,4.6,h+4,20),M(0xd5d9dc,.9),0,8.5+h/2,-5.2);part(P,lin,[0,22,-3],'Liner','Heat-moldable inner boot for a custom fit',lab);
+  const cl=new THREE.Group();g.add(cl);const cm=M(0xdfe3e6,.4,.3);
+  if(it.p.lace==='lace'){for(let i=0;i<5;i++){const y=8+i*(h-2)/5;const l=put(cl,new THREE.BoxGeometry(7,.35,.35),cm,0,y,3.4+i*.15);l.rotation.z=(i%2?1:-1)*.35}}
+  else{const dial=(y,z,x)=>{const d=put(cl,cyl(1.7,1.7,1.4,20),M(0x1c1f22,.4,.2),x,y,z);d.rotation.z=Math.PI/2;put(cl,cyl(.6,.6,1.5,12),M(0xc8323a,.5),x+.1,y,z).rotation.z=Math.PI/2};
+    dial(7+h*.62,-3,6.4);if(it.p.lace==='boa2')dial(5.5,5,6.3)}
+  part(P,cl,[9,4,0],it.p.lace==='lace'?'Laces':'BOA dial'+(it.p.lace==='boa2'?'s':''),it.specs[0][1],lab);
+  return g}
+
+/* ---------- ski ---------- */
+function buildSki(side,P){const s=itemOf(side,'ski'),bi=itemOf(side,'bind'),bt=itemOf(side,'boot'),g=new THREE.Group(),p=s.p,L=p.L;
+  const hw=x=>{const f=x>0?p.tip:p.tail,u=Math.abs(x)/(L/2),w=p.waist/2+(f/2-p.waist/2)*Math.pow(Math.min(1,u/.82),2);const R=x>0?11:(p.twin?9:4),e=L/2-R,a=Math.abs(x);if(a<=e)return w;const v=(a-e)/R;return w*Math.sqrt(Math.max(0,1-v*v))};
+  const bend=x=>{let y=0;const f=Math.max(0,x-(L/2-24));y+=f*f*.035;const t=Math.max(0,-x-(L/2-(p.twin?20:9)));y+=t*t*(p.twin?.03:.02);return y+.5*(1-Math.pow(x/(L/2),2))};
+  const top=M(colOf(side,s),.45,.05);
+  [-11,11].forEach((z,i)=>{const sg=new THREE.Group();sg.position.z=z;g.add(sg);const lab=i===1;
+    part(P,put(sg,plank(L,x=>hw(x)+.18,.1,bend,0),STEEL),[0,-6,0],'Steel edges','Bite into hard snow and ice',lab);
+    part(P,put(sg,plank(L,hw,.28,bend,.1),BASE),[0,-2,0],'Base','Sintered P-tex, holds wax',lab);
+    part(P,put(sg,plank(L,x=>hw(x)-.3,.9,bend,.38),WOOD),[0,6,0],'Core','Wood core, sometimes with metal or carbon for stability',lab);
+    part(P,put(sg,plank(L,hw,.25,bend,1.28),top),[0,13,0],'Topsheet','Protects the core',lab);
+    const by=1.53+bend(-6),bg=bindingSki(bi,colOf(side,bi),P,lab);bg.position.set(-6,by,0);sg.add(bg);part(P,bg,[0,0,0],'Binding',bi.sub,false);
+    const bo=bootSki(bt,colOf(side,bt),P,lab);bo.position.set(-6,by+2.2,0);sg.add(bo);part(P,bo,[0,26,0],'Boot: '+bt.brand+' '+bt.name,bt.sub,lab)});
+  return g}
+function bindingSki(it,col,P,lab){const g=new THREE.Group(),m=M(col,.45,.2),k=it.p.sz;
+  put(g,rbox(40,1,6,.4),DARK,0,.5,0);
+  const toe=new THREE.Group();g.add(toe);toe.position.x=17.5;put(toe,rbox(9*k,5*k,7.5*k,1.5),m,0,3,0);put(toe,rbox(4,2,6.8,.6),DARK,-4,4.8*k,0);
+  part(P,toe,[10,6,0],'Toe piece: '+it.brand+' '+it.name,'Releases sideways in a twisting fall',lab);
+  const heel=new THREE.Group();g.add(heel);heel.position.x=-18.5;put(heel,rbox(11*k,7*k,7.5*k,1.8),m,0,4,0);put(heel,rbox(8,1.4,4,.5),DARK,-6,6.5*k,0);
+  part(P,heel,[-10,6,0],'Heel piece','Releases upward in a forward fall. DIN sets how easily',lab);
+  const br=new THREE.Group();g.add(br);[-4.4,4.4].forEach(z=>{const a=put(br,new THREE.BoxGeometry(9,.6,.7),STEEL,-12,1.4,z);a.rotation.z=.35});
+  part(P,br,[-4,-8,0],'Brakes','Spring down to stop a loose ski',lab);
+  return g}
+function bootSki(it,col,P,lab){const g=new THREE.Group(),m=M(col,.35,.1),f=it.p.flex,sh=new THREE.Group();g.add(sh);
+  put(sh,rbox(31,2,10.6,.8),M(0x2b2f33,.8),0,1,0);put(sh,rbox(29,9.5,11,3),m,.5,6.2,0);
+  const cuff=put(sh,rbox(15,22,12.6,3),m,-6,20,0);cuff.rotation.z=-.2;
+  part(P,sh,[0,0,0],'Boot shell','Flex '+f+': higher is stiffer',false);
+  const bk=new THREE.Group();g.add(bk);const bm=M(0xcfd5da,.35,.8);
+  [[7,10.5,.25],[11,8.4,.35],[-1,17,-.2],[1.5,26,-.2]].forEach(([x,y,r])=>{const b=put(bk,new THREE.BoxGeometry(1.1,1.3,13.4),bm,x,y,0);b.rotation.z=r});
+  put(bk,new THREE.BoxGeometry(1.6,3,13.4),M(0x1c1f22,.7),-3,31,0).rotation.z=-.2;
+  part(P,bk,[7,3,7],'Buckles + power strap','Four buckles and a strap lock your heel in',lab);
+  const lin=put(g,cyl(5.1,5,27,20),M(0xd5d9dc,.9),-6.5,22,0);lin.rotation.z=-.2;part(P,lin,[-3,24,0],'Liner','Moldable inner boot. Fit matters more than anything',lab);
+  return g}
+
+/* ---------- rider ---------- */
+function buildRider(side,P){const g=new THREE.Group(),tp=itemOf(side,'top'),bt=itemOf(side,'bottom'),skin=M(0x9aa3aa,.8),body=new THREE.Group();g.add(body);
+  put(body,new THREE.SphereGeometry(11,28,20),skin,0,161,0);put(body,cyl(5,5,9),skin,0,147,0);
+  put(body,rbox(33,48,19,6),skin,0,120,0);put(body,rbox(29,14,18,5),skin,0,92,0);
+  [-1,1].forEach(s=>{const a=put(body,cyl(4.4,4,62),skin,s*22.5,108,0);a.rotation.z=s*.12;put(body,new THREE.SphereGeometry(4.6,16,12),skin,s*26.5,76,2);
+    put(body,cyl(6.5,5.4,82),skin,s*9.5,45,0);put(body,rbox(11,7,25,2.5),M(0x2b2f33,.8),s*9.5,3.5,4)});
+  /* helmet + goggles */
+  const hel=new THREE.Group();g.add(hel);const hm=put(hel,new THREE.SphereGeometry(12.6,28,20,0,Math.PI*2,0,Math.PI*.58),M(0x2a2f35,.35,.1),0,162,0);
+  const gog=put(hel,rbox(21,6.5,5,2),M(0x16191c,.5),0,160,9.6);put(hel,rbox(18,5,1,1.6),M(0x6fd3ff,.1,.6,{emissive:0x0d3a4f}),0,160,12.3);
+  part(P,hel,[0,26,0],'Helmet + goggles','Ask about fitting both together',true);
+  /* top */
+  const tg=new THREE.Group(),f=tp.p.puff,tm=M(colOf(side,tp),tp.p.kind==='puffer'?.4:.65);g.add(tg);
+  put(tg,rbox(36*f,56,23*f,7),tm,0,117,0);
+  [-1,1].forEach(s=>{const a=put(tg,cyl(5.9*f,5.6*f,60),tm,s*23,108.5,0);a.rotation.z=s*.12;put(tg,cyl(5.2,5.2,3),M(0x23272b,.8),s*26.6,79.5,.5).rotation.z=s*.12});
+  if(tp.p.hood)put(tg,new THREE.SphereGeometry(10.5*f,20,14,0,Math.PI*2,0,Math.PI*.55),tm,0,146,-8).rotation.x=-.9;else put(tg,cyl(7.5,8,5,20),tm,0,145,0);
+  if(tp.p.kind==='puffer')for(let i=0;i<6;i++)put(tg,rbox(36.6*f,.7,23.6*f,.3),M(new THREE.Color(colOf(side,tp)).multiplyScalar(.7).getHex(),.6),0,96+i*8.5,0);
+  const zipLen=tp.p.kind==='anorak'?18:52;put(tg,new THREE.BoxGeometry(.7,zipLen,.5),M(0x15181b,.4,.3),0,143-zipLen/2,11.5*f+.25);
+  if(tp.p.kind==='anorak')put(tg,rbox(20,12,2,2),tm,0,104,11.6*f);
+  part(P,tg,[0,20,46],'Top: '+tp.brand,tp.name+' · '+tp.sub,true);
+  /* bottom */
+  const bg=new THREE.Group(),w=bt.p.w,bm=M(colOf(side,bt),.7);g.add(bg);
+  put(bg,rbox(32*w,13,21*w,5),bm,0,92,0);
+  [-1,1].forEach(s=>{put(bg,cyl(8.1*w,8.6*w,80,20),bm,s*9.8*Math.min(w,1.15),49,0);put(bg,cyl(8.7*w,8.7*w,3,20),M(new THREE.Color(colOf(side,bt)).multiplyScalar(.7).getHex(),.8),s*9.8*Math.min(w,1.15),9.5,0)});
+  if(bt.p.kind==='cargo')[-1,1].forEach(s=>put(bg,rbox(4,13,11,1.5),bm,s*(9.8*1.15+8.4*w),62,0));
+  if(bt.p.kind==='bib'){put(bg,rbox(30*w,30,21.6*w,5),bm,0,110,0);[-1,1].forEach(s=>put(bg,new THREE.BoxGeometry(3,30,23*w),M(0x23272b,.8),s*9,136,0))}
+  part(P,bg,[0,-6,46],'Bottom: '+bt.brand,bt.name+' · '+bt.specs.find(s=>s[0]==='Fit')[1].toLowerCase()+' fit',true);
+  return g}
+
+/* ===================== VIEWS (A = main, B = compare) ===================== */
+function makeView(side){const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(34,1,1,4000);
+  scene.add(new THREE.HemisphereLight(0xe4f1ff,0x3a4148,.75));const d=new THREE.DirectionalLight(0xffffff,.85);d.position.set(120,260,160);scene.add(d);
+  const d2=new THREE.DirectionalLight(0x9fd8ff,.4);d2.position.set(-180,90,-140);scene.add(d2);
+  const rig=new THREE.Group();scene.add(rig);
+  const cv=document.createElement('canvas');cv.width=cv.height=128;const cx=cv.getContext('2d'),gr=cx.createRadialGradient(64,64,4,64,64,64);gr.addColorStop(0,'rgba(0,0,0,.55)');gr.addColorStop(1,'rgba(0,0,0,0)');cx.fillStyle=gr;cx.fillRect(0,0,128,128);
+  const shadow=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
+  return{side,scene,cam,rig,shadow,parts:[],root:null,center:new THREE.Vector3(),radius:100,labels:[]}}
+const VA=makeView(A),VB=makeView(B);
+let rotY=-.55,rotX=.32,zoom=1,t=0,target=0;
+function build(V){if(V.root){V.rig.remove(V.root);V.root.traverse(o=>{if(o.isMesh){o.geometry.dispose()}})}
+  V.parts=[];const P=V.parts,g=mode==='rider'?buildRider(V.side,P):sport==='snowboard'?buildSnowboard(V.side,P):buildSki(V.side,P);
+  const box=new THREE.Box3().setFromObject(g),c=box.getCenter(new THREE.Vector3());
+  const holder=new THREE.Group();holder.add(g);g.position.set(-c.x,-box.min.y,-c.z);V.root=holder;V.rig.add(holder);
+  V.height=box.max.y-box.min.y;const s0=new THREE.Box3().setFromObject(holder).getBoundingSphere(new THREE.Sphere());
+  for(const p of V.parts)p.o.position.copy(p.base).add(p.off);holder.updateMatrixWorld(true);const s1=new THREE.Box3().setFromObject(holder).getBoundingSphere(new THREE.Sphere());
+  for(const p of V.parts)p.o.position.copy(p.base);V.fit=[s0.radius,s0.center.y,Math.max(s0.radius,s1.radius),s1.center.y];
+  const sx=(box.max.x-box.min.x)*1.15,sz=(box.max.z-box.min.z)*1.6+20;V.shadow.scale.set(Math.max(sx,sz),Math.max(sx,sz),1);V.shadow.position.y=-.2;
+  makeLabels(V);applyT(V)}
+function makeLabels(V){V.labels.forEach(l=>l.el.remove());V.labels=[];let n=0;const L=V===VA?$('legendL'):null;if(L)L.innerHTML='';
+  for(const p of V.parts){if(!p.lab)continue;n++;const el=document.createElement('div');el.className='lbl';el.textContent=n;$('lbls').appendChild(el);V.labels.push({el,p});
+    if(L){const li=document.createElement('li'),i=document.createElement('i'),d=document.createElement('div'),b=document.createElement('b'),sp=document.createElement('span');i.textContent=n;b.textContent=p.name;sp.textContent=p.desc||'';d.append(b,sp);li.append(i,d);L.appendChild(li)}}}
+const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+function applyT(V){const e=ease(t);for(const p of V.parts)p.o.position.copy(p.base).addScaledVector(p.off,e)}
+function rects(){const w=$('view').clientWidth,h=$('view').clientHeight;return compare?{A:{x:0,y:Math.floor(h/2),w,h:h-Math.floor(h/2)},B:{x:0,y:0,w,h:Math.floor(h/2)},W:w,H:h}:{A:{x:0,y:0,w,h},W:w,H:h}}
+function setCam(V,R){const asp=R.w/Math.max(1,R.h);V.cam.aspect=asp;const e=ease(t),F=V.fit,r=F[0]+(F[2]-F[0])*e,ty=F[1]+(F[3]-F[1])*e;
+  const fv=V.cam.fov*Math.PI/180,fh=2*Math.atan(Math.tan(fv/2)*asp);let d=(mode==='rider'?r/Math.sin(Math.min(fv,fh)/2)*1.02:Math.max(r/Math.sin(fh/2),r*.62/Math.sin(fv/2))*.92)/zoom;
+  V.cam.position.set(0,ty+Math.sin(rotX)*d,Math.cos(rotX)*d);V.cam.lookAt(0,ty,0);V.cam.near=Math.max(1,d/50);V.cam.far=d*6;V.cam.updateProjectionMatrix();
+  V.rig.rotation.y=rotY}
+const tmp=new THREE.Vector3(),tbox=new THREE.Box3();
+function placeLabels(V,R){const show=t>.32;for(const l of V.labels){if(!show){l.el.style.opacity=0;continue}
+  tbox.setFromObject(l.p.o).getCenter(tmp);tmp.project(V.cam);const x=R.x+(tmp.x+1)/2*R.w,y=R.y+(1-tmp.y)/2*R.h,ok=tmp.z<1&&x>-50&&x<R.x+R.w+50&&y>R.y&&y<R.y+R.h+20;
+  l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.style.opacity=ok?Math.min(1,(t-.32)*4):0}}
+function hideLabels(V){V.labels.forEach(l=>l.el.style.opacity=0)}
+function resize(){const v=$('view');renderer.setSize(v.clientWidth,v.clientHeight,false)}
+addEventListener('resize',resize);
+function frame(){requestAnimationFrame(frame);const k=target-t;if(Math.abs(k)>.0005){t+=k*.12;applyT(VA);if(compare)applyT(VB);$('t').value=Math.round(t*1000)}
+  const R=rects(),H=R.H;renderer.setScissorTest(true);renderer.setClearColor(0,0);renderer.clear();
+  const draw=(V,r)=>{setCam(V,r);renderer.setViewport(r.x,H-r.y-r.h,r.w,r.h);renderer.setScissor(r.x,H-r.y-r.h,r.w,r.h);renderer.render(V.scene,V.cam);placeLabels(V,r)};
+  draw(VA,R.A);if(compare)draw(VB,R.B);else hideLabels(VB);
+  const lg=$('legend');lg.style.opacity=t>.32?Math.min(1,(t-.32)*4):0;lg.style.top=(R.A.y+10)+'px';lg.style.maxHeight=(R.A.h-70)+'px';
+  $('count').textContent=t<.02?'assembled':t>.98?'taken apart':Math.round(t*100)+'% apart'}
+
+/* ===================== INPUT ===================== */
+const ptrs=new Map();let pinch=0;
+$('c').addEventListener('pointerdown',e=>{$('c').setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY})});
+$('c').addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;
+  if(ptrs.size===2){const a=[...ptrs.values()];const d0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);p.x=e.clientX;p.y=e.clientY;const b=[...ptrs.values()];const d1=Math.hypot(b[0].x-b[1].x,b[0].y-b[1].y);if(d0>0)zoom=Math.max(.5,Math.min(3.5,zoom*d1/d0));return}
+  rotY+=(e.clientX-p.x)*.008;rotX=Math.max(-.15,Math.min(1.35,rotX+(e.clientY-p.y)*.005));p.x=e.clientX;p.y=e.clientY});
+const up=e=>ptrs.delete(e.pointerId);$('c').addEventListener('pointerup',up);$('c').addEventListener('pointercancel',up);
+$('c').addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.5,Math.min(3.5,zoom*Math.exp(-e.deltaY*.0012)))},{passive:false});
+$('zin').onclick=()=>zoom=Math.min(3.5,zoom*1.2);$('zout').onclick=()=>zoom=Math.max(.5,zoom/1.2);
+$('t').oninput=e=>{target=t=e.target.value/1000;applyT(VA);if(compare)applyT(VB);syncApart()};
+$('apart').onclick=()=>{target=target>.5?0:1;syncApart()};
+function syncApart(){$('apart').textContent=target>.5?'Put together':'Take apart'}
+
+/* ===================== UI ===================== */
+function slotBtn(side,slot,label,small){const it=itemOf(side,slot),b=document.createElement('button');b.className='slot';
+  b.innerHTML='<span class="sk"></span><span class="sn"></span>'+(small?'':'<span class="sp"></span>');b.querySelector('.sk').textContent=label;b.querySelector('.sn').textContent=it.brand+' '+it.name;
+  if(!small)b.querySelector('.sp').textContent=fmt(priceOf(it))+' · '+it.sub;b.title='Change '+label.toLowerCase();b.onclick=()=>openPick(side,slot,label);return b}
+const total=side=>curSlots().reduce((s,[k])=>s+priceOf(itemOf(side,k)),0);
+function refreshUI(){const SA=$('slotsA'),SB=$('slotsB');SA.innerHTML='';SB.innerHTML='';
+  for(const [k,l] of curSlots()){SA.appendChild(slotBtn(A,k,l));if(compare)SB.appendChild(slotBtn(B,k,l,true))}
+  document.querySelectorAll('#sportSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sport===sport));
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
+  $('totAK').textContent=mode==='gear'?'Setup':'Outfit';$('totA').textContent=fmt(total(A));$('totB').textContent=fmt(total(B));
+  $('barB').hidden=!compare;$('cmpdiv').hidden=!compare;$('view').classList.toggle('cmp',compare);$('cmpBtn').setAttribute('aria-pressed',compare);
+  $('stage').innerHTML='';const s=document.createElement('span');s.textContent=(sport==='ski'?'Ski':'Snowboard')+' · '+(mode==='gear'?'gear setup':'rider outfit')+' · ';const b=document.createElement('b');b.textContent=compare?'comparing':'drag to look around';$('stage').append(s,b);
+  if(!$('spec').hidden)renderSpec();if(!$('colPop').hidden)renderColors();saveState()}
+function bumpB(){const ks=curSlots();if(ks.every(([k])=>(A.sel[sport][k]||0)===(B.sel[sport][k]||0))){const k=ks[0][0];B.sel[sport][k]=((A.sel[sport][k]||0)+1)%catOf(sport,k).length}}
+function rebuild(){build(VA);if(compare){bumpB();build(VB)}refreshUI()}
+document.querySelectorAll('#sportSeg button').forEach(b=>b.onclick=()=>{sport=b.dataset.sport;zoom=1;rebuild()});
+document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;zoom=1;rotX=mode==='rider'?.12:.32;rotY=mode==='rider'?-.45:-.55;rebuild()});
+/* picker */
+let pickSide=A,pickSlot='board';
+function openPick(side,slot,label){pickSide=side;pickSlot=slot;$('pickTitle').textContent=(side===B?'Compare · ':'')+'Choose '+label.toLowerCase();$('pickSub').textContent=(sport==='ski'?'Ski':'Snowboard')+' · '+catOf(sport,slot).length+' options';
+  const L=$('plist');L.innerHTML='';catOf(sport,slot).forEach((it,i)=>{const b=document.createElement('button');b.className='pitem';b.setAttribute('aria-current',(side.sel[sport][slot]||0)===i);
+    b.innerHTML='<span><span class="br"></span><span class="nm"></span><span class="ds"></span></span><span class="pr"></span>';b.querySelector('.br').textContent=it.brand;b.querySelector('.nm').textContent=it.name;b.querySelector('.ds').textContent=it.sub;b.querySelector('.pr').textContent=fmt(priceOf(it));
+    b.onclick=()=>{side.sel[sport][slot]=i;$('pick').hidden=true;build(side===A?VA:VB);refreshUI()};L.appendChild(b)});$('pick').hidden=false}
+$('pickClose').onclick=()=>$('pick').hidden=true;
+/* compare: second setup starts as a copy, then change any piece on top */
+$('cmpBtn').onclick=()=>{compare=!compare;if(compare){for(const sp in A.sel)B.sel[sp]=Object.assign({},A.sel[sp]);B.col=Object.assign({},A.col);
+  bumpB();build(VB)}else{hideLabels(VB)}refreshUI()};
+$('cmpClose').onclick=()=>{compare=false;hideLabels(VB);refreshUI()};
+/* colors */
+function renderColors(){const B0=$('colBody');B0.innerHTML='';for(const [k,l] of curSlots()){const it=itemOf(A,k),h=document.createElement('div');h.className='poph';h.textContent=l;const sm=document.createElement('small');sm.textContent=it.brand+' '+it.name;h.appendChild(sm);B0.appendChild(h);
+  const sw=document.createElement('div');sw.className='sws';it.colors.forEach(([n,c],i)=>{const b=document.createElement('button');b.style.background='#'+c.toString(16).padStart(6,'0');b.title=n;b.setAttribute('aria-label',n);b.setAttribute('aria-pressed',(A.col[it.id]||0)===i);
+    b.onclick=()=>{A.col[it.id]=i;build(VA);renderColors();saveState()};sw.appendChild(b)});B0.appendChild(sw)}}
+$('colBtn').onclick=()=>{const o=$('colPop').hidden;$('colPop').hidden=!o;$('colBtn').setAttribute('aria-pressed',o);if(o)renderColors()};
+$('colDone').onclick=()=>{$('colPop').hidden=true;$('colBtn').setAttribute('aria-pressed',false)};
+/* spec sheet */
+function renderSpec(){const sides=compare?[A,B]:[A],two=sides.length>1,W=$('specBody');W.innerHTML='';
+  $('specTitle').textContent=two?'Side-by-side specs':'Spec sheet';$('specSub').textContent=(shop.name||'Ride Bench')+' · '+(sport==='ski'?'Ski':'Snowboard')+' '+(mode==='gear'?'setup':'outfit');
+  for(const [k,l] of curSlots()){const its=sides.map(s=>itemOf(s,k)),t=document.createElement('table');t.className='spec';
+    const hr=document.createElement('tr'),h0=document.createElement('th');h0.className='sl';h0.textContent=l;hr.appendChild(h0);
+    its.forEach(it=>{const th=document.createElement('th'),sm=document.createElement('small');sm.textContent=it.brand;th.append(sm,document.createTextNode(it.name));hr.appendChild(th)});
+    const hd=document.createElement('thead');hd.appendChild(hr);t.appendChild(hd);const bd=document.createElement('tbody');
+    const rows=[['Price',its.map(it=>fmt(priceOf(it))),'price'],['What it is',its.map(it=>it.sub)],['Color',its.map((it,i)=>it.colors[Math.min(sides[i].col[it.id]||0,it.colors.length-1)][0])]];
+    its[0].specs.forEach(([lab])=>rows.push([lab,its.map(it=>(it.specs.find(s=>s[0]===lab)||[0,'—'])[1])]));
+    for(const [lab,vals,cls] of rows){const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=lab;tr.appendChild(th);const diff=two&&vals[0]!==vals[1];
+      vals.forEach(v=>{const td=document.createElement('td');td.textContent=v;if(cls)td.className=cls;if(diff&&!cls)td.classList.add('diff');tr.appendChild(td)});bd.appendChild(tr)}
+    t.appendChild(bd);W.appendChild(t)}
+  const tt=document.createElement('table');tt.className='spec tot';const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=mode==='gear'?'Setup total':'Outfit total';tr.appendChild(th);
+  sides.forEach(s=>{const td=document.createElement('td');td.textContent=fmt(total(s));tr.appendChild(td)});const tb=document.createElement('tbody');tb.appendChild(tr);tt.appendChild(tb);W.appendChild(tt);
+  const n=document.createElement('p');n.className='specnote';n.textContent=(two?'Highlighted rows are where the two differ. ':'')+'Specs describe each model in general and can change with size and model year. Prices are set by the shop; ask at the counter for sizing, availability and current pricing.';W.appendChild(n)}
+$('specBtn').onclick=()=>{renderSpec();$('spec').hidden=false};$('specClose').onclick=()=>$('spec').hidden=true;$('specPrint').onclick=()=>{try{print()}catch(e){}};
+/* shop */
+function applyShop(){$('title').textContent=shop.name||'Ride Bench';document.title=shop.name?shop.name+' · Ride Bench':'Ride Bench';refreshUI()}
+function renderPrices(){const box=$('sPrices'),q=$('sPrQ').value.toLowerCase().split(/\s+/).filter(Boolean);box.innerHTML='';
+  const groups=[['Snowboards',GEAR.snowboard.board],['Snowboard bindings',GEAR.snowboard.bind],['Snowboard boots',GEAR.snowboard.boot],['Skis',GEAR.ski.ski],['Ski bindings',GEAR.ski.bind],['Ski boots',GEAR.ski.boot],['Tops',CLOTH.top],['Bottoms',CLOTH.bottom]];
+  for(const [gn,L] of groups){const its=L.filter(it=>q.every(w=>(gn+' '+it.brand+' '+it.name).toLowerCase().includes(w)));if(!its.length)continue;
+    const h=document.createElement('div');h.className='pg';h.textContent=gn;box.appendChild(h);
+    for(const it of its){const r=document.createElement('div');r.className='pr';const s=document.createElement('span');s.textContent=it.brand+' '+it.name;const i=document.createElement('input');i.type='text';i.inputMode='decimal';i.maxLength=10;
+      i.placeholder=fmt(it.price);i.value=shop.prices[it.id]||'';i.setAttribute('aria-label','Price for '+it.brand+' '+it.name);i.oninput=()=>{const v=i.value.trim();if(v)shop.prices[it.id]=v;else delete shop.prices[it.id];saveShop()};r.append(s,i);box.appendChild(r)}}}
+$('shopBtn').onclick=()=>{$('sName').value=shop.name||'';$('sPrQ').value='';renderPrices();$('shop').hidden=false};
+$('shopClose').onclick=()=>$('shop').hidden=true;$('sName').oninput=e=>{shop.name=e.target.value.trim();saveShop()};$('sPrQ').oninput=renderPrices;
+addEventListener('keydown',e=>{if(e.key==='Escape')for(const id of['pick','spec','shop','colPop'])$(id).hidden=true});
+
+resize();if(mode==='rider')rotX=.12;build(VA);refreshUI();applyShop();frame();
+</script>
+</body>
+</html>
