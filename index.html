@@ -128,6 +128,10 @@ input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
 .prl .pr{display:flex;align-items:center;gap:10px;justify-content:space-between;font-size:14px}
 .prl .pr input{width:110px;flex:none}
 @media (max-width:700px){.slot{min-width:0;flex:1 1 140px}.hint{display:none}.spec thead th.sl,.spec tbody th{width:90px}.spec th,.spec td{padding:8px 6px}}
+/* what this shop sells */
+.sportchk{display:flex;gap:16px;flex-wrap:wrap;margin-top:2px}
+.sportchk label{display:flex;gap:8px;align-items:center;font-family:var(--f-body);font-size:16px;font-weight:500;text-transform:none;letter-spacing:0;margin:0;cursor:pointer}
+.sportchk input{width:20px;height:20px;accent-color:var(--accent)}
 @media print{body{overflow:visible;background:#fff;color:#000}.app,#pick,#shop{display:none!important}#spec{position:static;background:#fff;color:#000}#spec .hdr-r{display:none}#spec .body{overflow:visible}.spec td.diff,.spec td.price,.spec.tot td{color:#000}}
 </style>
 </head>
@@ -136,7 +140,7 @@ input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
   <header class="pad">
     <div><h1 id="title">Ride Bench</h1><div class="stage" id="stage"></div></div>
     <div class="hdr-r">
-      <div class="seg" id="sportSeg"><button data-sport="snowboard">Snowboard</button><button data-sport="ski">Ski</button></div>
+      <div class="seg" id="sportSeg"><button data-sport="snowboard">Snowboard</button><button data-sport="ski">Ski</button><button data-go="skate/" data-sp="skate">Skate</button></div>
       <div class="seg" id="modeSeg"><button data-mode="gear">Gear</button><button data-mode="rider">Rider</button></div>
       <button id="shopBtn" style="font-size:12px;padding:6px 9px;opacity:.7">Shop</button>
     </div>
@@ -186,6 +190,8 @@ input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
   <div class="sheet-hd pad"><div><h2>Shop setup</h2><div class="sub">Saved on this device</div></div><button class="primary" id="shopClose">Done</button></div>
   <div class="body pad"><div class="shopform">
     <label for="sName">Shop name<span>Replaces the title at the top of the screen</span></label><input id="sName" type="text" maxlength="40" placeholder="Mountain Ride Shop">
+    <div class="lab">What this shop sells<span>Unticked sports are hidden on this tablet. Keep at least one.</span></div><div class="sportchk" id="sSports"></div>
+    <label for="sLink">Shop link<span>Open this link on any of the shop's tablets and it starts with these settings</span></label><input id="sLink" type="text" readonly><button id="sCopy" style="align-self:flex-start">Copy link</button>
     <div class="lab">Prices<span>Sample prices are filled in. Type your own price for anything you sell. Leave a box blank to go back to the sample price.</span></div>
     <input id="sPrQ" type="search" placeholder="Find an item…" autocomplete="off"><div class="prl" id="sPrices"></div>
   </div></div>
@@ -560,7 +566,7 @@ function refreshUI(){const SA=$('slotsA'),SB=$('slotsB');SA.innerHTML='';SB.inne
   if(!$('spec').hidden)renderSpec();if(!$('colPop').hidden)renderColors();saveState()}
 function bumpB(){const ks=curSlots();if(ks.every(([k])=>(A.sel[sport][k]||0)===(B.sel[sport][k]||0))){const k=ks[0][0];B.sel[sport][k]=((A.sel[sport][k]||0)+1)%catOf(sport,k).length}}
 function rebuild(){build(VA);if(compare){bumpB();build(VB)}refreshUI()}
-document.querySelectorAll('#sportSeg button').forEach(b=>b.onclick=()=>{sport=b.dataset.sport;zoom=1;rebuild()});
+document.querySelectorAll('#sportSeg button').forEach(b=>b.onclick=()=>{if(b.dataset.go){location.href=b.dataset.go;return}sport=b.dataset.sport;zoom=1;rebuild()});
 document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;zoom=1;rotX=mode==='rider'?.12:.32;rotY=mode==='rider'?-.45:-.55;rebuild()});
 /* picker */
 let pickSide=A,pickSlot='board';
@@ -603,8 +609,8 @@ function renderPrices(){const box=$('sPrices'),q=$('sPrQ').value.toLowerCase().s
     const h=document.createElement('div');h.className='pg';h.textContent=gn;box.appendChild(h);
     for(const it of its){const r=document.createElement('div');r.className='pr';const s=document.createElement('span');s.textContent=it.brand+' '+it.name;const i=document.createElement('input');i.type='text';i.inputMode='decimal';i.maxLength=10;
       i.placeholder=fmt(it.price);i.value=shop.prices[it.id]||'';i.setAttribute('aria-label','Price for '+it.brand+' '+it.name);i.oninput=()=>{const v=i.value.trim();if(v)shop.prices[it.id]=v;else delete shop.prices[it.id];saveShop()};r.append(s,i);box.appendChild(r)}}}
-$('shopBtn').onclick=()=>{$('sName').value=shop.name||'';$('sPrQ').value='';renderPrices();$('shop').hidden=false};
-$('shopClose').onclick=()=>$('shop').hidden=true;$('sName').oninput=e=>{shop.name=e.target.value.trim();saveShop()};$('sPrQ').oninput=renderPrices;
+$('shopBtn').onclick=()=>{$('sName').value=shop.name||'';$('sPrQ').value='';renderPrices();renderSports();$('shop').hidden=false};
+$('shopClose').onclick=()=>$('shop').hidden=true;$('sName').oninput=e=>{shop.name=e.target.value.trim();saveShop();$('sLink').value=shopLinkUrl()};$('sPrQ').oninput=renderPrices;
 addEventListener('pointerdown',()=>lastInput=performance.now(),true);
 addEventListener('keydown',e=>{if(e.key==='Escape')for(const id of['pick','spec','shop','colPop','size'])$(id).hidden=true});
 
@@ -637,7 +643,26 @@ function openSize(){$('sizeTitle').textContent=(sport==='ski'?'Ski':'Snowboard')
 $('sizeBtn').onclick=openSize;$('sizeClose').onclick=()=>$('size').hidden=true;
 $('zApply').onclick=()=>{const o=sizeCalc();A.len[sport]=o.len;$('size').hidden=true;if(mode!=='gear'){mode='gear'}build(VA);VA.drop=1;refreshUI()};
 
-resize();if(mode==='rider')rotX=.12;build(VA);refreshUI();applyShop();frame();
+/* ---- what this shop sells: shared by the snow page and the skate page on the same site ---- */
+const SP_ALL=['snowboard','ski','skate'],SP_NAME={snowboard:'Snowboard',ski:'Ski',skate:'Skate'},SP_HERE=['snowboard','ski'];
+let SPORTS=SP_ALL.slice();
+(()=>{const q=new URLSearchParams(location.search);try{const v=(q.get('sports')||localStorage.getItem('bench-sports')||'').split(',').filter(x=>SP_ALL.includes(x));if(v.length)SPORTS=v;
+  if(q.get('sports'))localStorage.setItem('bench-sports',SPORTS.join(','))}catch(e){}
+  if(q.has('shop')){shop.name=(q.get('shop')||'').trim().slice(0,40);try{localStorage.setItem('rb-shop',JSON.stringify(shop))}catch(e){}}})();
+const ROOT=location.href.split(/[?#]/)[0].replace(/index\.html$/,'');
+function shopLinkUrl(){const q=new URLSearchParams();q.set('sports',SPORTS.join(','));if(shop.name)q.set('shop',shop.name);return ROOT+'?'+q.toString()}
+function applySports(){const snow=SPORTS.filter(x=>x!=='skate');
+  if(!SP_HERE.some(x=>SPORTS.includes(x))){location.replace(SPORTS.includes('skate')?ROOT+'skate/':ROOT+'?sport='+snow[0]);return false}
+  const bs=[...document.querySelectorAll('#sportSeg button')];bs.forEach(b=>b.hidden=!SPORTS.includes(b.dataset.sport||b.dataset.sp));
+  $('sportSeg').hidden=bs.filter(b=>!b.hidden).length<2;return true}
+function renderSports(){const box=$('sSports');box.innerHTML='';for(const sp of SP_ALL){const l=document.createElement('label'),i=document.createElement('input');i.type='checkbox';i.checked=SPORTS.includes(sp);
+    i.onchange=()=>{const nx=SP_ALL.filter(x=>x===sp?i.checked:SPORTS.includes(x));if(!nx.length){i.checked=true;return}SPORTS=nx;try{localStorage.setItem('bench-sports',SPORTS.join(','))}catch(e){}
+      $('sLink').value=shopLinkUrl();if(!SP_HERE.some(x=>SPORTS.includes(x))){applySports();return}if(!SPORTS.includes(sport)){sport=SPORTS.find(x=>x!=='skate');rebuild()} applySports()};
+    l.append(i,document.createTextNode(SP_NAME[sp]));box.appendChild(l)}$('sLink').value=shopLinkUrl();$('sCopy').textContent='Copy link'}
+$('sCopy').onclick=()=>{const v=$('sLink').value;const done=()=>$('sCopy').textContent='Copied';try{navigator.clipboard.writeText(v).then(done,()=>{$('sLink').select();document.execCommand('copy');done()})}catch(e){$('sLink').select();document.execCommand('copy');done()}};
+{const qs=new URLSearchParams(location.search).get('sport');if(qs&&qs in SLOTS)sport=qs;if(!SPORTS.includes(sport)&&SPORTS.some(x=>x in SLOTS))sport=SPORTS.find(x=>x in SLOTS)}
+const SPORTS_OK=applySports();
+if(SPORTS_OK){resize();if(mode==='rider')rotX=.12;build(VA);refreshUI();applyShop();frame()}
 </script>
 </body>
 </html>
