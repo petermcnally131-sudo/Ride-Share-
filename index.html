@@ -88,6 +88,7 @@ input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
 .count{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:70px;text-align:right}
 .tools{justify-content:center}
 .tools .tool{font-size:clamp(14px,1.2vw,17px);padding:9px 16px}
+@media (max-width:520px){.tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}.tools .tool{padding:9px 6px}}
 .sheet{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
 .sheet[hidden],.pop[hidden],[hidden]{display:none!important}
 .sheet-hd{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-block:14px 10px;border-bottom:1px solid var(--line)}
@@ -396,7 +397,7 @@ function bootSB(it,col,P,lab){const g=new THREE.Group(),m=M(col,.7),h=it.p.h,sol
   const loop=put(shell,new THREE.TorusGeometry(1.6,.35,8,16),M(0x5cc8ff,.6),0,7+h+.6,-11.8);loop.rotation.y=Math.PI/2;
   [-1,1].forEach(sx=>decal(shell,it.brand,9,2.2,inkFor(col),sx*5.92,7+h*.45,-6,sx*Math.PI/2));
   part(P,shell,[0,0,0],'Boot shell','Outer boot: '+it.specs.find(s=>s[0]==='Flex')[1].toLowerCase()+' flex',false);
-  const lin=put(g,cyl(4.8,4.6,h+4,20),M(0xd5d9dc,.9),0,8.5+h/2,-5.2);part(P,lin,[0,22,-3],'Liner','Heat-moldable inner boot for a custom fit',lab);
+  const lin=put(g,cyl(4.6,4.4,h-1,20),M(0x7d8a95,.95),0,6.2+h/2,-5.2);put(lin,new THREE.TorusGeometry(4.7,.7,8,24),M(0x2b2f33,.8),0,(h-1)/2,0).rotation.x=Math.PI/2;part(P,lin,[0,22,-3],'Liner','Heat-moldable inner boot for a custom fit',lab);
   const cl=new THREE.Group();g.add(cl);const cm=M(0xdfe3e6,.4,.3);
   if(it.p.lace==='lace'){for(let i=0;i<5;i++){const y=8+i*(h-2)/5;const l=put(cl,new THREE.BoxGeometry(7,.35,.35),cm,0,y,3.4+i*.15);l.rotation.z=(i%2?1:-1)*.35}}
   else{const dial=(y,z,x)=>{const d=put(cl,cyl(1.7,1.7,1.4,20),M(0x1c1f22,.4,.2),x,y,z);d.rotation.z=Math.PI/2;put(cl,cyl(.6,.6,1.5,12),M(0xc8323a,.5),x+.1,y,z).rotation.z=Math.PI/2};
@@ -436,7 +437,7 @@ function bootSki(it,col,P,lab){const g=new THREE.Group(),m=M(col,.35,.1),f=it.p.
   [[7,10.5,.25],[11,8.4,.35],[-1,17,-.2],[1.5,26,-.2]].forEach(([x,y,r])=>{const b=put(bk,new THREE.BoxGeometry(1.1,1.3,13.4),bm,x,y,0);b.rotation.z=r});
   put(bk,new THREE.BoxGeometry(1.6,3,13.4),M(0x1c1f22,.7),-3,31,0).rotation.z=-.2;
   part(P,bk,[7,3,7],'Buckles + power strap','Four buckles and a strap lock your heel in',lab);
-  const lin=put(g,cyl(5.1,5,27,20),M(0xd5d9dc,.9),-6.5,22,0);lin.rotation.z=-.2;part(P,lin,[-3,24,0],'Liner','Moldable inner boot. Fit matters more than anything',lab);
+  const lin=put(g,cyl(5,4.9,20,20),M(0x7d8a95,.95),-6.2,19.5,0);put(lin,new THREE.TorusGeometry(5.1,.7,8,24),M(0x2b2f33,.8),0,10,0).rotation.x=Math.PI/2;lin.rotation.z=-.2;part(P,lin,[-3,24,0],'Liner','Moldable inner boot. Fit matters more than anything',lab);
   return g}
 
 /* ---------- rider ---------- */
