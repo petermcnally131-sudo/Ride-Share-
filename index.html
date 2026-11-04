@@ -160,7 +160,7 @@ input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
   <div class="rail pad">
     <div class="row"><div class="slots" id="slotsA"></div></div>
     <div class="row"><button id="apart" class="primary">Take apart</button><input id="t" type="range" min="0" max="1000" value="0" aria-label="Take apart"><span class="count" id="count"></span></div>
-    <div class="row tools"><button id="colBtn" class="tool" aria-pressed="false">Colors</button><button id="cmpBtn" class="tool" aria-pressed="false">Compare</button><button id="specBtn" class="tool">Specs</button><button id="sizeBtn" class="tool">Size finder</button></div>
+    <div class="row tools"><button id="colBtn" class="tool" aria-pressed="false">Colors</button><button id="cmpBtn" class="tool" aria-pressed="false">Compare</button><button id="specBtn" class="tool">Specs</button><button id="scnBtn" class="tool" aria-pressed="true">Scene: on</button><button id="sizeBtn" class="tool">Size finder</button></div>
   </div>
 </div>
 
@@ -473,7 +473,7 @@ function buildFigure(side,P,c){const g=new THREE.Group(),tp=itemOf(side,'top'),b
   part(P,bg,[f.x*44,-4,f.z*44],'Bottom: '+bt.brand,bt.name+' · '+bt.sub,true);
   /* torso, arms, head: built in the torso's own frame (+z = facing, leaning forward) */
   const tg=new THREE.Group();tg.position.set(hc.x,hc.y+9,hc.z);tg.rotation.order='YXZ';tg.rotation.y=c.face;tg.rotation.x=c.lean;g.add(tg);
-  put(tg,cyl(4.6,5,9,14),skin,0,51,0);const head=ball(tg,V3(0,62,1),10.5,skin);head.scale.set(.95,1.08,1);
+  put(tg,cyl(4.6,5,9,14),skin,0,51,0);const head=ball(tg,V3(0,62,1),10.5,skin);head.scale.set(.95,1.08,1);const dk=M(0x1d2024,.5);[-1,1].forEach(s=>{ball(tg,V3(s*3.6,63.6,10.1),1.15,dk);put(tg,new THREE.BoxGeometry(3.4,.6,.6),dk,s*3.7,66.4,9.6).rotation.z=s*-.12;const ear=ball(tg,V3(s*10,62.4,1),2.5,skin);ear.scale.z=.55});ball(tg,V3(0,60.6,11.4),1.45,skin);put(tg,new THREE.BoxGeometry(4.2,.6,.6),M(0x6b4f45,.6),0,56.8,10.3);
   const top=new THREE.Group();tg.add(top);const pf=tp.p.puff,tc=colOf(side,tp),tm=M(tc,tp.p.kind==='puffer'?.42:.66),td=M(new THREE.Color(tc).multiplyScalar(.7).getHex(),.7);
   put(top,rbox(35*pf,48,22*pf,8),tm,0,23,0);put(top,cyl(7.6*pf,8.6*pf,6,20),tm,0,48,0);put(top,rbox(35.6*pf,3,22.6*pf,1.2),td,0,0,0);
   if(tp.p.hood){const hd=put(top,new THREE.SphereGeometry(10.5*pf,22,14,0,Math.PI*2,0,Math.PI*.55),tm,0,50,-9);hd.rotation.x=-1.05}
@@ -525,6 +525,42 @@ function buildRider(side,P){const g=new THREE.Group(),tp=itemOf(side,'top'),bt=i
   return g}
 
 /* ===================== VIEWS (A = main, B = compare) ===================== */
+/* ---------- scenery: snowy slope or skatepark behind the models ---------- */
+let sceneOn=true;try{sceneOn=localStorage.getItem('bench-scene')!=='0'}catch(e){}
+let RNG=1;const rnd=()=>{RNG=(RNG*16807)%2147483647;return (RNG-1)/2147483646};
+function skyTex(top,mid,bot){const cv=document.createElement('canvas');cv.width=4;cv.height=256;const x=cv.getContext('2d'),gr=x.createLinearGradient(0,0,0,256);gr.addColorStop(0,top);gr.addColorStop(.62,mid);gr.addColorStop(1,bot);x.fillStyle=gr;x.fillRect(0,0,4,256);const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;return t}
+const ENVC={};
+function snowEnv(){const e=new THREE.Group();RNG=7;
+  const gnd=put(e,new THREE.CircleGeometry(2600,72),M(0xeef3f7,.93),0,-.2,0);gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
+  const snow=M(0xf4f8fb,.9),pine=M(0x23452f,.85),pine2=M(0x2d5a3c,.85),bark=M(0x4a3426,.9),rock=M(0xc9d3db,.85);
+  for(let i=0;i<14;i++){const a=rnd()*Math.PI*2,d=380+rnd()*500,m=put(e,new THREE.SphereGeometry(60+rnd()*70,14,8),snow,Math.cos(a)*d,-30,Math.sin(a)*d);m.scale.y=.32;m.receiveShadow=true}
+  for(let i=0;i<90;i++){const a=rnd()*Math.PI*2,d=520+rnd()*900,s=.8+rnd()*1.1,tr=new THREE.Group();tr.position.set(Math.cos(a)*d,0,Math.sin(a)*d);tr.scale.setScalar(s);tr.rotation.y=rnd()*6;e.add(tr);
+    put(tr,cyl(3,4,18,7),bark,0,9,0);[[34,40,26],[27,34,48],[19,28,68],[11,22,86]].forEach(([r,h,y],k)=>{put(tr,new THREE.ConeGeometry(r,h,8),k%2?pine2:pine,0,y,0);put(tr,new THREE.ConeGeometry(r*.55,h*.32,8),snow,0,y+h*.36,0)})}
+  for(let i=0;i<9;i++){const a=(i/9)*Math.PI*2+rnd()*.4,d=2000+rnd()*400,h=600+rnd()*700,r=h*.95,mt=new THREE.Group();mt.position.set(Math.cos(a)*d,-40,Math.sin(a)*d);e.add(mt);
+    put(mt,new THREE.ConeGeometry(r,h,7),rock,0,h/2,0);put(mt,new THREE.ConeGeometry(r*.42,h*.42,7),snow,0,h*.79,0)}
+  e.userData={sky:skyTex('#5b97c9','#b9d4e6','#eaf1f6'),fog:0xe3ecf2};return e}
+function skateEnv(){const e=new THREE.Group();RNG=11;
+  const cv=document.createElement('canvas');cv.width=cv.height=256;const x=cv.getContext('2d');x.fillStyle='#a4a7a9';x.fillRect(0,0,256,256);
+  for(let i=0;i<2600;i++){const v=150+Math.random()*40|0;x.fillStyle='rgba('+v+','+v+','+v+',.25)';x.fillRect(Math.random()*256,Math.random()*256,1.5,1.5)}
+  x.strokeStyle='rgba(60,62,64,.55)';x.lineWidth=3;x.strokeRect(0,0,256,256);const ct=new THREE.CanvasTexture(cv);ct.encoding=THREE.sRGBEncoding;ct.wrapS=ct.wrapT=THREE.RepeatWrapping;ct.repeat.set(26,26);
+  const conc=M(0xffffff,.88,0,{map:ct}),gnd=put(e,new THREE.CircleGeometry(2400,64),conc,0,-.2,0);gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;
+  const wall=M(0xb7babc,.85),steel=M(0xc8ced3,.3,.9),paint=M(0xd8533a,.7);
+  /* quarter pipe behind */
+  const R=150,sh=new THREE.Shape();sh.moveTo(0,0);for(let i=0;i<=24;i++){const a=i/24*Math.PI/2;sh.lineTo(R-R*Math.cos(a),R-R*Math.sin(a)+0)}
+  sh.lineTo(R+70,R);sh.lineTo(R+70,0);sh.lineTo(0,0);
+  const qg=new THREE.ExtrudeGeometry(sh,{depth:520,bevelEnabled:false,curveSegments:24});qg.translate(0,0,-260);
+  const qp=new THREE.Mesh(qg,wall);qp.rotation.y=Math.PI/2;qp.position.set(0,-.2,-360);qp.castShadow=qp.receiveShadow=true;e.add(qp);
+  const cop=put(e,cyl(3.2,3.2,520,16),steel,0,R-.2,-360-R);cop.rotation.z=Math.PI/2;
+  /* ledge with steel edge, flat rail, a few cones */
+  const lg=put(e,rbox(220,42,46,2),wall,300,21,-40);lg.castShadow=lg.receiveShadow=true;put(e,new THREE.BoxGeometry(220,2.4,2.4),steel,300,42,-17);
+  const rl=new THREE.Group();rl.position.set(-300,0,-30);e.add(rl);put(rl,new THREE.BoxGeometry(260,3,6),paint,0,32,0);[-110,0,110].forEach(px=>put(rl,cyl(2.6,2.6,32,10),paint,px,16,0));
+  for(let i=0;i<6;i++){const a=.4+i*.9,d=700+rnd()*400,b=put(e,rbox(80+rnd()*120,300+rnd()*300,80,4),M(0x3a3f47,.9),Math.cos(a)*d,140,Math.sin(a)*d);b.rotation.y=rnd()*3}
+  e.traverse(o=>{if(o.isMesh&&o!==gnd){o.castShadow=true;o.receiveShadow=true}});
+  e.userData={sky:skyTex('#2c3e5c','#c98a64','#f0c08f'),fog:0xd6ad8a};return e}
+function buildEnv(V){if(V.env){V.rig.remove(V.env);V.env=null}if(!sceneOn){V.scene.background=null;V.scene.fog=null;return}
+  const kind=sport==='skate'?'skate':'snow',e=(ENVC[kind+(V===VA?'A':'B')]=ENVC[kind+(V===VA?'A':'B')]||(kind==='skate'?skateEnv():snowEnv()));
+  V.env=e;V.rig.add(e);V.scene.background=e.userData.sky;V.scene.fog=new THREE.Fog(e.userData.fog,900,3400)}
+function syncScene(){$('scnBtn').setAttribute('aria-pressed',sceneOn);$('scnBtn').textContent=sceneOn?'Scene: on':'Scene: off'}
 function makeView(side){const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(34,1,1,4000);scene.environment=ENV;
   scene.add(new THREE.HemisphereLight(0xe4f1ff,0x3a4148,.35));const d=new THREE.DirectionalLight(0xffffff,1.15);d.position.set(120,260,160);d.castShadow=true;d.shadow.mapSize.set(2048,2048);d.shadow.bias=-.0004;d.shadow.normalBias=.3;scene.add(d);scene.add(d.target);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000),new THREE.ShadowMaterial({opacity:.42}));floor.rotation.x=-Math.PI/2;floor.position.y=-.05;floor.receiveShadow=true;scene.add(floor);
@@ -545,7 +581,7 @@ function build(V){if(V.root){V.rig.remove(V.root);V.root.traverse(o=>{if(o.isMes
   const sx=(box.max.x-box.min.x)*1.15,sz=(box.max.z-box.min.z)*1.6+20;V.shadow.scale.set(Math.max(sx,sz),Math.max(sx,sz),1);V.shadow.position.y=-.2;
   holder.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.castShadow=!o.userData.decal;o.receiveShadow=true}});
   const R0=V.fit[2],k=V.key;k.position.set(R0*.7,R0*2.2,R0*1.1);k.target.position.set(0,0,0);const sc=k.shadow.camera;sc.left=sc.bottom=-R0*1.4;sc.right=sc.top=R0*1.4;sc.near=1;sc.far=R0*6;sc.updateProjectionMatrix();
-  V.focus=null;if(V===VA)showFocus(null);makeLabels(V);applyT(V)}
+  V.focus=null;if(V===VA)showFocus(null);buildEnv(V);makeLabels(V);applyT(V)}
 function makeLabels(V){V.labels.forEach(l=>l.el.remove());V.labels=[];let n=0;const L=V===VA?$('legendL'):null;if(L)L.innerHTML='';
   for(const p of V.parts){if(!p.lab)continue;n++;const el=document.createElement('div');el.className='lbl';el.textContent=n;el.onclick=()=>focusPart(V,p);$('lbls').appendChild(el);V.labels.push({el,p});
     if(L){const li=document.createElement('li'),i=document.createElement('i'),d=document.createElement('div'),b=document.createElement('b'),sp=document.createElement('span');i.textContent=n;b.textContent=p.name;sp.textContent=p.desc||'';d.append(b,sp);li.append(i,d);li.onclick=()=>focusPart(V,p);p.li=li;L.appendChild(li)}}}
@@ -557,7 +593,7 @@ function setCam(V,R){const asp=R.w/Math.max(1,R.h);V.cam.aspect=asp;if(!V.root)r
   V.rig.rotation.y=rotY;V.rig.updateMatrixWorld(true);const gt=new THREE.Vector3(0,ty,0);
   if(V.focus){tbox.setFromObject(V.focus.o);tbox.getCenter(gt);const fr=tbox.getBoundingSphere(new THREE.Sphere()).radius;d=Math.max(fr*5.4,mode==='rider'?120:60)/zoom}
   if(!V.ct){V.ct=gt.clone();V.cd=d}V.ct.lerp(gt,.14);V.cd+=(d-V.cd)*.14;const c=V.ct,D=V.cd;
-  V.cam.position.set(c.x,c.y+Math.sin(rotX)*D,c.z+Math.cos(rotX)*D);V.cam.lookAt(c);V.cam.near=Math.max(.5,D/60);V.cam.far=D*8;V.cam.updateProjectionMatrix()}
+  V.cam.position.set(c.x,c.y+Math.sin(rotX)*D,c.z+Math.cos(rotX)*D);V.cam.lookAt(c);V.cam.near=Math.max(.5,D/60);V.cam.far=Math.max(D*8,5200);V.cam.updateProjectionMatrix()}
 function dim(V){const keep=new Set();if(V.focus)V.focus.o.traverse(o=>keep.add(o));V.root.traverse(o=>{if(!o.isMesh)return;const on=!V.focus||keep.has(o),m=o.material;
   if(m.userData.t0===undefined){m.userData.t0=m.transparent;m.userData.dw=m.depthWrite}m.transparent=!on||m.userData.t0;m.opacity=on?1:.06;m.depthWrite=on?m.userData.dw:false;m.needsUpdate=true})}
 function focusPart(V,p){V.focus=V.focus===p?null:p;dim(V);if(V===VA)showFocus(V.focus);V.labels.forEach(l=>l.el.classList.toggle('on',l.p===V.focus));lastInput=performance.now()}
@@ -571,7 +607,9 @@ function hideLabels(V){V.labels.forEach(l=>{l.el.style.opacity=0;l.el.style.poin
 function resize(){const v=$('view');renderer.setSize(v.clientWidth,v.clientHeight,false)}
 addEventListener('resize',resize);
 let lastInput=performance.now();
-function frame(){requestAnimationFrame(frame);const now=performance.now();if(now-lastInput>15000&&$('pick').hidden&&$('spec').hidden&&$('size').hidden&&$('shop').hidden&&!VA.focus)rotY+=.0022;
+const CSZ=new THREE.Vector2();
+function frame(){requestAnimationFrame(frame);const now=performance.now();{const v=$('view');renderer.getSize(CSZ);if(CSZ.x!==v.clientWidth||CSZ.y!==v.clientHeight)resize()}if(now-lastInput>15000&&$('pick').hidden&&$('spec').hidden&&$('size').hidden&&$('shop').hidden&&!VA.focus)rotY+=.0022;
+  for(const V of[VA,VB])if(V.root){const live=mode==='rider'&&t<.02&&!V.focus,k=now/1000;V.root.rotation.x+=((live?Math.sin(k*1.15)*(sport==='skate'?.03:.06):0)-V.root.rotation.x)*.1}
   for(const V of[VA,VB])if(V.root&&V.drop>.001){V.drop*=.84;V.root.position.y=V.drop*V.drop*16}
   const k=target-t;if(Math.abs(k)>.0005){t+=k*.12;applyT(VA);if(compare)applyT(VB);$('t').value=Math.round(t*1000)}
   const R=rects(),H=R.H;renderer.setScissorTest(true);renderer.setClearColor(0,0);renderer.clear();
@@ -650,6 +688,7 @@ function renderSpec(){const sides=compare?[A,B]:[A],two=sides.length>1,W=$('spec
   const tt=document.createElement('table');tt.className='spec tot';const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=mode==='gear'?'Setup total':'Outfit total';tr.appendChild(th);
   sides.forEach(s=>{const td=document.createElement('td');td.textContent=fmt(total(s));tr.appendChild(td)});const tb=document.createElement('tbody');tb.appendChild(tr);tt.appendChild(tb);W.appendChild(tt);
   const n=document.createElement('p');n.className='specnote';n.textContent=(two?'Highlighted rows are where the two differ. ':'')+'Specs describe each model in general and can change with size and model year. Prices are set by the shop; ask at the counter for sizing, availability and current pricing.';W.appendChild(n)}
+$('scnBtn').onclick=()=>{sceneOn=!sceneOn;try{localStorage.setItem('bench-scene',sceneOn?'1':'0')}catch(e){}syncScene();buildEnv(VA);if(compare)buildEnv(VB)};
 $('specBtn').onclick=()=>{renderSpec();$('spec').hidden=false};$('specClose').onclick=()=>$('spec').hidden=true;$('specPrint').onclick=()=>{try{print()}catch(e){}};
 /* shop */
 function applyShop(){$('title').textContent=shop.name||'Ride Bench';document.title=shop.name?shop.name+' · Ride Bench':'Ride Bench';refreshUI()}
@@ -712,7 +751,7 @@ function renderSports(){const box=$('sSports');box.innerHTML='';for(const sp of 
 $('sCopy').onclick=()=>{const v=$('sLink').value;const done=()=>$('sCopy').textContent='Copied';try{navigator.clipboard.writeText(v).then(done,()=>{$('sLink').select();document.execCommand('copy');done()})}catch(e){$('sLink').select();document.execCommand('copy');done()}};
 {const qs=new URLSearchParams(location.search).get('sport');if(qs&&qs in SLOTS)sport=qs;if(!SPORTS.includes(sport)&&SPORTS.some(x=>x in SLOTS))sport=SPORTS.find(x=>x in SLOTS)}
 const SPORTS_OK=applySports();
-if(SPORTS_OK){resize();if(mode==='rider')rotX=.12;build(VA);refreshUI();applyShop();frame()}
+if(SPORTS_OK){resize();if(mode==='rider')rotX=.12;syncScene();build(VA);refreshUI();applyShop();frame()}
 </script>
 </body>
 </html>
