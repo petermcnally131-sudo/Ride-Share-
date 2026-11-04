@@ -280,7 +280,7 @@ ski:{
 }};
 const CLOTH={
  top:[
-  {id:'top-tnf-shell',brand:'The North Face',name:'3-layer shell jacket',sub:'Waterproof shell · no insulation',price:399,p:{kind:'shell',puff:1,hood:1},colors:[C('Black',0x1d2024),C('Red',0xb8332a),C('Blue',0x2f6fb0),C('Green',0x3d7a52)],
+  {id:'top-tnf-shell',brand:'The North Face',name:'3-layer shell jacket',sub:'Waterproof shell · no insulation',price:399,p:{kind:'shell',puff:1,hood:1},colors:[C('Red',0xb8332a),C('Blue',0x2f6fb0),C('Green',0x3d7a52),C('Black',0x1d2024)],
    specs:[['Type','Shell (layer underneath)'],['Waterproof','Yes, taped seams'],['Insulation','None'],['Features','Helmet-compatible hood, pit zips, powder skirt']]},
   {id:'top-hh-ins',brand:'Helly Hansen',name:'Insulated ski jacket',sub:'Warm · waterproof',price:349,p:{kind:'ins',puff:1.1,hood:1},colors:[C('Navy',0x23365a),C('Red',0xb8332a),C('White',0xe8ecef)],
    specs:[['Type','Insulated'],['Waterproof','Yes, taped seams'],['Insulation','Synthetic fill'],['Features','Hood, pass pocket, powder skirt']]},
@@ -446,7 +446,57 @@ function bootSki(it,col,P,lab){const g=new THREE.Group(),m=M(col,.35,.1),f=it.p.
   const lin=put(g,cyl(5,4.9,20,20),M(0x7d8a95,.95),-6.2,19.5,0);put(lin,new THREE.TorusGeometry(5.1,.7,8,24),M(0x2b2f33,.8),0,10,0).rotation.x=Math.PI/2;lin.rotation.z=-.2;part(P,lin,[-3,24,0],'Liner','Moldable inner boot. Fit matters more than anything',lab);
   return g}
 
-/* ---------- rider ---------- */
+/* ---------- rider figure: jointed, posed to stand in the gear ---------- */
+const UPV=new THREE.Vector3(0,1,0),V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+function seg(par,a,b,r1,r2,m,s=20){const d=new THREE.Vector3().subVectors(b,a),L=Math.max(.01,d.length()),o=new THREE.Mesh(cyl(r2,r1,L,s),m);o.position.copy(a).addScaledVector(d,.5);o.quaternion.setFromUnitVectors(UPV,d.normalize());par.add(o);return o}
+function ball(par,p,r,m){const o=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),m);o.position.copy(p);par.add(o);return o}
+/* two-bone reach: joint position between root a and end c, bending toward 'bend' */
+function ik(a,c,l1,l2,bend){const d=new THREE.Vector3().subVectors(c,a),dir=d.clone().normalize(),L=Math.min(d.length(),l1+l2-.05),x=(l1*l1-l2*l2+L*L)/(2*L),h=Math.sqrt(Math.max(0,l1*l1-x*x));
+  const n=bend.clone().addScaledVector(dir,-bend.dot(dir)).normalize();return a.clone().addScaledVector(dir,x).addScaledVector(n,h)}
+const FIGCFG={
+  snowboard:()=>({ankles:[V3(-23,15,-1),V3(23,15,-1)],face:0,lean:.16,arms:'wide',crouch:.88,back:2,gloves:1,goggles:1}),
+  ski:()=>({ankles:[V3(-11,17,-11),V3(-11,17,11)],face:Math.PI/2,lean:.38,arms:'poles',crouch:.88,back:5,gloves:1,goggles:1,poles:1}),
+  skate:side=>{const top=itemOf(side,'wheels').p.d/20+4.6*itemOf(side,'trucks').p.h+1.3;return{ankles:[V3(-17,top+8,0),V3(17,top+8,0)],face:0,lean:.06,arms:'relax',crouch:.95,back:0,shoes:1}}};
+function buildFigure(side,P,c){const g=new THREE.Group(),tp=itemOf(side,'top'),bt=itemOf(side,'bottom');
+  const skin=M(0xaab3ba,.7),glove=M(0x1c2024,.75),f=V3(Math.sin(c.face),0,Math.cos(c.face)),sd=V3(Math.cos(c.face),0,-Math.sin(c.face));
+  const [A1,A2]=c.ankles,mid=A1.clone().add(A2).multiplyScalar(.5),T=44,S=43,reach=(T+S)*c.crouch;
+  const hc=mid.clone().addScaledVector(f,-c.back),sideOf=a=>Math.sign(a.clone().sub(mid).dot(sd))||1;
+  let hy=Infinity;for(const a of c.ankles){const hj=hc.clone().addScaledVector(sd,sideOf(a)*9),hz=Math.hypot(a.x-hj.x,a.z-hj.z);hy=Math.min(hy,a.y+Math.sqrt(Math.max(1,reach*reach-hz*hz)))}hc.y=hy;
+  /* bottom: pelvis + legs, in world space */
+  const bg=new THREE.Group();g.add(bg);const w=bt.p.w,bc=colOf(side,bt),bm=M(bc,.78),bd=M(new THREE.Color(bc).multiplyScalar(.72).getHex(),.85);
+  const pel=put(bg,rbox(31*w,17,21*w,6),bm,hc.x,hc.y+3,hc.z);pel.rotation.y=c.face;put(pel,rbox(31.4*w,2.4,21.4*w,1),bd,0,7.6,0);
+  for(const a of c.ankles){const s=sideOf(a),hj=hc.clone().addScaledVector(sd,s*9),k=ik(hj,a,T,S,f.clone().add(V3(0,-.15,0)));
+    const th=seg(bg,hj,k,8.4*w,7.2*w,bm);ball(bg,k,7.2*w,bm);seg(bg,k,a,7.2*w,6.6*w,bm);ball(bg,a,6.6*w,bd);
+    if(bt.p.kind==='cargo'){const pk=put(bg,rbox(3,12,10,1.4),bm,0,0,0);pk.position.copy(hj.clone().lerp(k,.55).addScaledVector(sd,s*8.4*w));pk.quaternion.copy(th.quaternion);pk.rotateY(c.face)}
+    if(c.shoes){const sh=new THREE.Group();sh.position.set(a.x,a.y-8,a.z);sh.rotation.y=c.face;bg.parent.add(sh);
+      put(sh,rbox(11.4,2.2,27,1),M(0xf1efe8,.7),0,1.1,4);put(sh,rbox(10.6,5.8,25,2.6),M(0x22262a,.85),0,4.8,3.6);put(sh,rbox(10.8,.5,25.6,.25),M(0xf1efe8,.7),0,2.4,4)}}
+  part(P,bg,[f.x*44,-4,f.z*44],'Bottom: '+bt.brand,bt.name+' · '+bt.sub,true);
+  /* torso, arms, head: built in the torso's own frame (+z = facing, leaning forward) */
+  const tg=new THREE.Group();tg.position.set(hc.x,hc.y+9,hc.z);tg.rotation.order='YXZ';tg.rotation.y=c.face;tg.rotation.x=c.lean;g.add(tg);
+  put(tg,cyl(4.6,5,9,14),skin,0,51,0);const head=ball(tg,V3(0,62,1),10.5,skin);head.scale.set(.95,1.08,1);
+  const top=new THREE.Group();tg.add(top);const pf=tp.p.puff,tc=colOf(side,tp),tm=M(tc,tp.p.kind==='puffer'?.42:.66),td=M(new THREE.Color(tc).multiplyScalar(.7).getHex(),.7);
+  put(top,rbox(35*pf,48,22*pf,8),tm,0,23,0);put(top,cyl(7.6*pf,8.6*pf,6,20),tm,0,48,0);put(top,rbox(35.6*pf,3,22.6*pf,1.2),td,0,0,0);
+  if(tp.p.hood){const hd=put(top,new THREE.SphereGeometry(10.5*pf,22,14,0,Math.PI*2,0,Math.PI*.55),tm,0,50,-9);hd.rotation.x=-1.05}
+  if(tp.p.kind==='puffer')for(let i=0;i<5;i++)put(top,rbox(35.8*pf,.8,22.8*pf,.3),td,0,6+i*8.5,0);
+  const zl=tp.p.kind==='anorak'?16:44;put(top,new THREE.BoxGeometry(.8,zl,.5),M(0x15181b,.4,.3),0,47-zl/2,11*pf+.2);
+  if(tp.p.kind==='anorak')put(top,rbox(20,11,2,2),td,0,10,11*pf);
+  const hands=[];
+  [-1,1].forEach(s=>{const sh=V3(s*18*pf,42,0);let wr,bend;
+    if(c.arms==='poles'){wr=V3(s*21,14,31);bend=V3(s,-.3,-1)}else if(c.arms==='wide'){wr=V3(s*36,10,12);bend=V3(s*.2,-.4,-1)}else{wr=V3(s*24,2,7);bend=V3(s*.3,0,-1)}
+    const el=ik(sh,wr,29,27,bend.normalize());ball(top,sh,6.3*pf,tm);seg(top,sh,el,6.1*pf,5.5*pf,tm);ball(top,el,5.5*pf,tm);seg(top,el,wr,5.5*pf,4.9*pf,tm);
+    put(top,cyl(5.1*pf,5.1*pf,2.2,18),td,0,0,0).position.copy(wr.clone().lerp(el,.04));
+    const hnd=ball(tg,wr.clone().add(wr.clone().sub(el).normalize().multiplyScalar(3.6)),4.4,c.gloves?glove:skin);hnd.scale.set(.85,1.15,1);hands.push(hnd)});
+  part(P,top,[0,16,34],'Top: '+tp.brand,tp.name+' · '+tp.sub,true);
+  /* helmet (+ goggles for snow) */
+  const hel=new THREE.Group();tg.add(hel);put(hel,new THREE.SphereGeometry(11.8,28,18,0,Math.PI*2,0,Math.PI*.56),M(c.goggles?0x2a2f35:0xd9dde0,.42,.08),0,63,.6);
+  if(c.goggles){put(hel,rbox(20,6.6,4.6,2.2),M(0x16191c,.5),0,60.5,9.4);put(hel,rbox(17.4,5,1,1.8),M(0x6fd3ff,.12,.6,{emissive:0x0d3a4f}),0,60.5,11.8);put(hel,cyl(11.9,11.9,3.4,32,true),M(0x2a7fb0,.7,0,{side:THREE.DoubleSide}),0,60.5,.6)}
+  part(P,hel,[0,24,0],c.goggles?'Helmet + goggles':'Skate helmet',c.goggles?'Ask about fitting both together':'Most parks require one for under-18s',true);
+  /* ski poles from the hands to the snow */
+  if(c.poles){g.updateMatrixWorld(true);for(const h of hands){const hp=h.getWorldPosition(V3(0,0,0)),s=Math.sign(hp.clone().sub(hc).dot(sd))||1,tip=hp.clone().addScaledVector(f,-16).addScaledVector(sd,s*10);tip.y=.6;
+    seg(g,hp.clone().add(V3(0,7,0)),tip,.55,.45,M(0xb9c0c6,.3,.85),10);seg(g,hp.clone().add(V3(0,7,0)),hp.clone().add(V3(0,-5,0)),1.25,1.15,M(0x1c1f22,.7),14);
+    const bk=put(g,new THREE.TorusGeometry(3.4,.35,6,20),M(0x1c1f22,.7),0,0,0);bk.position.copy(hp.clone().lerp(tip,.9));bk.rotation.x=Math.PI/2}}
+  return g}
+/* ---------- rider (old, unused) ---------- */
 function buildRider(side,P){const g=new THREE.Group(),tp=itemOf(side,'top'),bt=itemOf(side,'bottom'),skin=M(0x9aa3aa,.8),body=new THREE.Group();g.add(body);
   put(body,new THREE.SphereGeometry(11,28,20),skin,0,161,0);put(body,cyl(5,5,9),skin,0,147,0);
   put(body,rbox(33,48,19,6),skin,0,120,0);put(body,rbox(29,14,18,5),skin,0,92,0);
@@ -486,7 +536,7 @@ function makeView(side){const scene=new THREE.Scene(),cam=new THREE.PerspectiveC
 const VA=makeView(A),VB=makeView(B);
 let rotY=-.55,rotX=.32,zoom=1,t=0,target=0;
 function build(V){if(V.root){V.rig.remove(V.root);V.root.traverse(o=>{if(o.isMesh){o.geometry.dispose()}})}
-  V.parts=[];const P=V.parts,g=mode==='rider'?buildRider(V.side,P):sport==='snowboard'?buildSnowboard(V.side,P):buildSki(V.side,P);
+  V.parts=[];const P=V.parts;let g;if(mode==='rider'){g=new THREE.Group();g.add(sport==='snowboard'?buildSnowboard(V.side,[]):buildSki(V.side,[]));g.add(buildFigure(V.side,P,FIGCFG[sport](V.side)))}else g=sport==='snowboard'?buildSnowboard(V.side,P):buildSki(V.side,P);
   const box=new THREE.Box3().setFromObject(g),c=box.getCenter(new THREE.Vector3());
   const holder=new THREE.Group();holder.add(g);g.position.set(-c.x,-box.min.y,-c.z);V.root=holder;V.rig.add(holder);
   V.height=box.max.y-box.min.y;const s0=new THREE.Box3().setFromObject(holder).getBoundingSphere(new THREE.Sphere());
@@ -567,7 +617,7 @@ function refreshUI(){const SA=$('slotsA'),SB=$('slotsB');SA.innerHTML='';SB.inne
 function bumpB(){const ks=curSlots();if(ks.every(([k])=>(A.sel[sport][k]||0)===(B.sel[sport][k]||0))){const k=ks[0][0];B.sel[sport][k]=((A.sel[sport][k]||0)+1)%catOf(sport,k).length}}
 function rebuild(){build(VA);if(compare){bumpB();build(VB)}refreshUI()}
 document.querySelectorAll('#sportSeg button').forEach(b=>b.onclick=()=>{if(b.dataset.go){location.href=b.dataset.go;return}sport=b.dataset.sport;zoom=1;rebuild()});
-document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;zoom=1;rotX=mode==='rider'?.12:.32;rotY=mode==='rider'?-.45:-.55;rebuild()});
+document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;zoom=1;rotX=mode==='rider'?.16:.32;rotY=mode==='rider'?(sport==='ski'?-1.05:-.45):-.55;rebuild()});
 /* picker */
 let pickSide=A,pickSlot='board';
 function openPick(side,slot,label){pickSide=side;pickSlot=slot;$('pickTitle').textContent=(side===B?'Compare · ':'')+'Choose '+label.toLowerCase();$('pickSub').textContent=(sport==='ski'?'Ski':'Snowboard')+' · '+catOf(sport,slot).length+' options';
